@@ -1,161 +1,9 @@
-// Real ghat and landmark locations in Prayagraj for Mahakumbh
-export const ghatLocations = [
-  {
-    id: 'triveni-sangam',
-    name: 'Triveni Sangam',
-    nameHi: 'त्रिवेणी संगम',
-    lat: 25.4270,
-    lng: 81.8855,
-    type: 'ghat',
-    capacity: 500000,
-    icon: '🙏',
-    description: 'Sacred confluence of Ganga, Yamuna & Saraswati',
-  },
-  {
-    id: 'dashashwamedh',
-    name: 'Dashashwamedh Ghat',
-    nameHi: 'दशाश्वमेध घाट',
-    lat: 25.4340,
-    lng: 81.8870,
-    type: 'ghat',
-    capacity: 300000,
-    icon: '🔥',
-    description: 'Historic ghat with evening aarti ceremonies',
-  },
-  {
-    id: 'arail-ghat',
-    name: 'Arail Ghat',
-    nameHi: 'अरैल घाट',
-    lat: 25.4190,
-    lng: 81.8920,
-    type: 'ghat',
-    capacity: 200000,
-    icon: '🌊',
-    description: 'Eastern bank ghat near Sangam',
-  },
-  {
-    id: 'ram-ghat',
-    name: 'Ram Ghat',
-    nameHi: 'राम घाट',
-    lat: 25.4380,
-    lng: 81.8810,
-    type: 'ghat',
-    capacity: 250000,
-    icon: '🙏',
-    description: 'Northern ghat area for pilgrim bathing',
-  },
-  {
-    id: 'saraswati-ghat',
-    name: 'Saraswati Ghat',
-    nameHi: 'सरस्वती घाट',
-    lat: 25.4310,
-    lng: 81.8900,
-    type: 'ghat',
-    capacity: 180000,
-    icon: '📿',
-    description: 'Sacred ghat along Saraswati river',
-  },
-  {
-    id: 'quila-ghat',
-    name: 'Quila Ghat',
-    nameHi: 'किला घाट',
-    lat: 25.4290,
-    lng: 81.8780,
-    type: 'ghat',
-    capacity: 150000,
-    icon: '🏰',
-    description: 'Near Allahabad Fort, historic bathing site',
-  },
-  {
-    id: 'nagvasuki',
-    name: 'Nag Vasuki Temple',
-    nameHi: 'नाग वासुकी मंदिर',
-    lat: 25.4350,
-    lng: 81.8750,
-    type: 'temple',
-    capacity: 80000,
-    icon: '🐍',
-    description: 'Ancient Nag Vasuki temple',
-  },
-  {
-    id: 'hanuman-mandir',
-    name: 'Bade Hanuman Mandir',
-    nameHi: 'बड़े हनुमान मंदिर',
-    lat: 25.4295,
-    lng: 81.8840,
-    type: 'temple',
-    capacity: 100000,
-    icon: '🙏',
-    description: 'Famous reclining Hanuman temple',
-  },
-];
+// Re-export structured Prayagraj locations from our synthetic data layer
+import { GHATS, PARKING, ROADS } from './kumbhData';
 
-// Major roads in Prayagraj for vehicle flow visualization
-export const majorRoads = [
-  {
-    id: 'nh19',
-    name: 'NH-19 (Grand Trunk Road)',
-    path: [
-      [25.4600, 81.8200],
-      [25.4520, 81.8350],
-      [25.4450, 81.8500],
-      [25.4380, 81.8650],
-      [25.4300, 81.8800],
-    ],
-    color: '#00E5FF',
-    trafficLevel: 'heavy',
-  },
-  {
-    id: 'nh30',
-    name: 'NH-30',
-    path: [
-      [25.4100, 81.8300],
-      [25.4200, 81.8450],
-      [25.4280, 81.8600],
-      [25.4320, 81.8750],
-      [25.4350, 81.8850],
-    ],
-    color: '#FF6B00',
-    trafficLevel: 'moderate',
-  },
-  {
-    id: 'bypass',
-    name: 'Allahabad Bypass Road',
-    path: [
-      [25.4700, 81.8100],
-      [25.4650, 81.8350],
-      [25.4550, 81.8550],
-      [25.4400, 81.8700],
-      [25.4250, 81.8850],
-    ],
-    color: '#00E676',
-    trafficLevel: 'light',
-  },
-];
-
-// Parking zones around Mela grounds
-export const parkingZones = [
-  { id: 'P1', name: 'Jhunsi Zone A', lat: 25.4450, lng: 81.8600, totalSlots: 500, type: 'car' },
-  { id: 'P2', name: 'Jhunsi Zone B', lat: 25.4480, lng: 81.8650, totalSlots: 400, type: 'car' },
-  { id: 'P3', name: 'Naini Bridge West', lat: 25.4150, lng: 81.8700, totalSlots: 600, type: 'bus' },
-  { id: 'P4', name: 'Naini Bridge East', lat: 25.4130, lng: 81.8780, totalSlots: 350, type: 'car' },
-  { id: 'P5', name: 'Civil Lines North', lat: 25.4550, lng: 81.8450, totalSlots: 450, type: 'car' },
-  { id: 'P6', name: 'Civil Lines South', lat: 25.4500, lng: 81.8480, totalSlots: 300, type: 'auto' },
-  { id: 'P7', name: 'Kydganj Area', lat: 25.4400, lng: 81.8350, totalSlots: 550, type: 'bus' },
-  { id: 'P8', name: 'GT Road Entry', lat: 25.4600, lng: 81.8250, totalSlots: 700, type: 'car' },
-  { id: 'P9', name: 'Parade Ground', lat: 25.4350, lng: 81.8500, totalSlots: 800, type: 'mixed' },
-  { id: 'P10', name: 'Mela Ground East', lat: 25.4280, lng: 81.8950, totalSlots: 250, type: 'car' },
-  { id: 'P11', name: 'Jhunsi Zone C', lat: 25.4500, lng: 81.8700, totalSlots: 500, type: 'car' },
-  { id: 'P12', name: 'Jhunsi Zone D', lat: 25.4520, lng: 81.8750, totalSlots: 450, type: 'car' },
-  { id: 'P13', name: 'Arail East Ring', lat: 25.4180, lng: 81.8980, totalSlots: 600, type: 'car' },
-  { id: 'P14', name: 'Arail West Ring', lat: 25.4160, lng: 81.8880, totalSlots: 400, type: 'mixed' },
-  { id: 'P15', name: 'Naini South Ring', lat: 25.4020, lng: 81.8600, totalSlots: 750, type: 'bus' },
-  { id: 'P16', name: 'GT Road West Gate', lat: 25.4620, lng: 81.8150, totalSlots: 500, type: 'car' },
-  { id: 'P17', name: 'Parade Ground West', lat: 25.4370, lng: 81.8420, totalSlots: 350, type: 'auto' },
-  { id: 'P18', name: 'Sangam Crossing Pkwy', lat: 25.4290, lng: 81.8910, totalSlots: 300, type: 'car' },
-  { id: 'P19', name: 'Sector 4 Camp Link', lat: 25.4330, lng: 81.8580, totalSlots: 400, type: 'mixed' },
-  { id: 'P20', name: 'Sector 12 Camp Link', lat: 25.4220, lng: 81.8720, totalSlots: 500, type: 'bus' },
-];
+export const ghatLocations = GHATS;
+export const parkingZones = PARKING;
+export const majorRoads = ROADS;
 
 // Bus/train routes for vehicle blip simulation
 export const transportRoutes = [
@@ -190,10 +38,10 @@ export const transportRoutes = [
     name: 'Prayagraj Jn → Naini',
     type: 'train',
     path: [
-      [25.4580, 81.8320],
-      [25.4450, 81.8500],
-      [25.4300, 81.8680],
-      [25.4150, 81.8750],
+      [25.4358, 81.8463],
+      [25.4250, 81.8550],
+      [25.4180, 81.8650],
+      [25.4150, 81.8700],
     ],
     frequency: '30 min',
   },

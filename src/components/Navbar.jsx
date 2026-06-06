@@ -10,7 +10,7 @@ const modules = [
 ];
 
 export default function Navbar() {
-  const { activeModule } = useAppState();
+  const { activeModule, isDemoActive, simulationTime } = useAppState();
   const dispatch = useAppDispatch();
 
   return (
@@ -47,26 +47,51 @@ export default function Navbar() {
       </div>
 
       {/* Right: Status */}
-      <div className="nav-status">
+      <div className="nav-status" style={{ display: 'flex', alignItems: 'center', gap: '0.8rem' }}>
+        <button
+          onClick={() => {
+            dispatch({ type: 'RESET_DEMO' });
+            dispatch({ type: 'ADD_EVENT_LOG', payload: 'Mela simulation manually reset to 07:30.' });
+          }}
+          className="px-3 py-1.5 rounded text-xs font-bold font-mono transition duration-200 cursor-pointer bg-charcoal border border-border text-text-secondary hover:text-white"
+        >
+          ↻ Reset Scenario
+        </button>
+
+        <button
+          onClick={() => {
+            if (isDemoActive) {
+              dispatch({ type: 'RESET_DEMO' });
+            } else {
+              dispatch({
+                type: 'SET_DEMO_STATE',
+                payload: {
+                  isDemoActive: true,
+                  demoStep: 1,
+                  demoCaption: "Step 1/6: Normal Operations at Prayagraj Mahakumbh (07:30). Mela area flow is steady with 1.8M cumulative pilgrims.",
+                },
+              });
+              dispatch({ type: 'SET_SIMULATION_TIME', payload: '07:30' });
+              dispatch({ type: 'SET_MODULE', payload: 'command-center' });
+            }
+          }}
+          className={`px-3 py-1.5 rounded text-xs font-bold font-mono transition duration-200 cursor-pointer shadow ${
+            isDemoActive 
+              ? 'bg-red text-white hover:bg-red/80' 
+              : 'bg-saffron text-white hover:bg-saffron/80'
+          }`}
+        >
+          {isDemoActive ? '⏹ Stop Demo' : '▶ Run Demo Scenario'}
+        </button>
+
         <div className="live-indicator">
           <span className="live-dot" />
           <span className="live-text">LIVE</span>
         </div>
-        <div className="nav-time">
-          <TimeDisplay />
+        <div className="nav-time font-mono text-xs" style={{ color: '#00E5FF', fontWeight: 'bold' }}>
+          ⏱️ {simulationTime}
         </div>
       </div>
     </nav>
-  );
-}
-
-function TimeDisplay() {
-  const now = new Date();
-  return (
-    <span className="font-mono text-xs" style={{ color: '#8892A4' }}>
-      {now.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}
-      {' · '}
-      {now.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}
-    </span>
   );
 }

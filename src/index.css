@@ -209,9 +209,14 @@ body {
 .dashboard {
   display: flex;
   flex-direction: column;
-  height: calc(100vh - 56px);
+  height: calc(100vh - 88px);
   overflow: hidden;
   gap: 6px;
+}
+@media (max-width: 640px) {
+  .dashboard {
+    height: calc(100vh - 96px);
+  }
 }
 
 .dashboard-top {

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useMemo } from 'react';
+import { useEffect, useRef, useMemo, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAppState, useAppDispatch } from '../context/AppContext';
 import SeverityBadge from './SeverityBadge';
@@ -117,10 +117,11 @@ function AlertCard({ alert, onDispatch, onDivert }) {
 // ---------------------------------------------------------------------------
 
 export default function AlertFeed() {
-  const { alerts } = useAppState();
+  const { alerts, events } = useAppState();
   const dispatch = useAppDispatch();
   const scrollContainerRef = useRef(null);
   const prevAlertCountRef = useRef(alerts.length);
+  const [activeSubTab, setActiveSubTab] = useState('alerts'); // 'alerts' | 'events'
 
   // Count unacknowledged alerts
   const unacknowledgedCount = useMemo(
@@ -130,11 +131,11 @@ export default function AlertFeed() {
 
   // Auto-scroll to top when a new alert arrives
   useEffect(() => {
-    if (alerts.length > prevAlertCountRef.current && scrollContainerRef.current) {
+    if (alerts.length > prevAlertCountRef.current && scrollContainerRef.current && activeSubTab === 'alerts') {
       scrollContainerRef.current.scrollTo({ top: 0, behavior: 'smooth' });
     }
     prevAlertCountRef.current = alerts.length;
-  }, [alerts.length]);
+  }, [alerts.length, activeSubTab]);
 
   // Dispatch handlers
   const handleDispatch = (id) => {
@@ -147,49 +148,86 @@ export default function AlertFeed() {
 
   return (
     <div className="h-full flex flex-col bg-[#0D1321] font-[Space_Grotesk] rounded-xl">
-      {/* ── Header ──────────────────────────────────────────── */}
-      <div className="flex items-center justify-between px-5 py-4 border-b border-white/10 shrink-0">
-        <div className="flex items-center gap-2.5">
-          {/* Pulsing red dot */}
-          <span className="relative flex h-2.5 w-2.5">
-            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[#FF1744] opacity-75" />
-            <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-[#FF1744]" />
-          </span>
-
-          <h2 className="text-sm font-bold tracking-widest text-white/90 uppercase">
-            Alert Feed
-          </h2>
-        </div>
-
-        {/* Unacknowledged count badge */}
-        {unacknowledgedCount > 0 && (
-          <span className="inline-flex items-center justify-center min-w-[22px] h-[22px] px-1.5 text-[11px] font-bold rounded-full bg-[#FF1744] text-white font-[IBM_Plex_Mono]">
-            {unacknowledgedCount}
-          </span>
-        )}
+      {/* ── Header Switcher Tab ────────────────────────────── */}
+      <div className="flex border-b border-white/10 shrink-0 p-1 bg-[#090D16] rounded-t-xl">
+        <button
+          onClick={() => setActiveSubTab('alerts')}
+          className={`flex-1 py-3 text-center text-xs font-bold uppercase tracking-wider rounded-lg transition-all duration-200 cursor-pointer flex items-center justify-center gap-2 ${
+            activeSubTab === 'alerts'
+              ? 'bg-saffron text-white shadow-md'
+              : 'text-white/50 hover:text-white/80'
+          }`}
+        >
+          <span>Live Alerts</span>
+          {unacknowledgedCount > 0 && (
+            <span className="inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 text-[10px] font-bold rounded-full bg-red text-white font-[IBM_Plex_Mono]">
+              {unacknowledgedCount}
+            </span>
+          )}
+        </button>
+        <button
+          onClick={() => setActiveSubTab('events')}
+          className={`flex-1 py-3 text-center text-xs font-bold uppercase tracking-wider rounded-lg transition-all duration-200 cursor-pointer flex items-center justify-center gap-2 ${
+            activeSubTab === 'events'
+              ? 'bg-saffron text-white shadow-md'
+              : 'text-white/50 hover:text-white/80'
+          }`}
+        >
+          <span>Event Log</span>
+          {events?.length > 0 && (
+            <span className="inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 text-[10px] font-bold rounded-full bg-cyan text-navy font-[IBM_Plex_Mono]">
+              {events.length}
+            </span>
+          )}
+        </button>
       </div>
 
-      {/* ── Scrollable alert list ────────────────────────────── */}
+      {/* ── Scrollable list content ────────────────────────── */}
       <div
         ref={scrollContainerRef}
         className="flex-1 overflow-y-auto overflow-x-hidden px-4 py-4 space-y-4 scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent"
       >
-        <AnimatePresence initial={false}>
-          {alerts.map((alert) => (
-            <AlertCard
-              key={alert.id}
-              alert={alert}
-              onDispatch={handleDispatch}
-              onDivert={handleDivert}
-            />
-          ))}
-        </AnimatePresence>
+        {activeSubTab === 'alerts' ? (
+          <>
+            <AnimatePresence initial={false}>
+              {alerts.map((alert) => (
+                <AlertCard
+                  key={alert.id}
+                  alert={alert}
+                  onDispatch={handleDispatch}
+                  onDivert={handleDivert}
+                />
+              ))}
+            </AnimatePresence>
 
-        {/* Empty state */}
-        {alerts.length === 0 && (
-          <div className="flex flex-col items-center justify-center py-12 text-white/30 text-sm">
-            <span className="text-3xl mb-2">✅</span>
-            No active alerts
+            {/* Empty state */}
+            {alerts.length === 0 && (
+              <div className="flex flex-col items-center justify-center py-12 text-white/30 text-sm">
+                <span className="text-3xl mb-2">✅</span>
+                No active alerts
+              </div>
+            )}
+          </>
+        ) : (
+          <div className="space-y-2">
+            {events && events.map((evt) => (
+              <div
+                key={evt.id}
+                className="bg-[#131A2B] border border-white/5 rounded-md px-3.5 py-3 font-mono text-[11px] flex gap-2.5 items-start leading-relaxed hover:border-white/10 transition-colors"
+              >
+                <span className="text-[#00E5FF] font-bold shrink-0">⏱️ {evt.time}</span>
+                <span className="text-white/80">{evt.message}</span>
+              </div>
+            ))}
+
+            {(!events || events.length === 0) && (
+              <div className="flex flex-col items-center justify-center py-12 text-white/30 text-xs font-mono text-center">
+                <span>[LOG IS EMPTY]</span>
+                <span className="text-[10px] text-white/10 mt-1">
+                  Step events will record here during demo runs.
+                </span>
+              </div>
+            )}
           </div>
         )}
       </div>

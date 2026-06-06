@@ -23,6 +23,7 @@ import {
   simulateSurgeResponse,
   generateForecastChartData
 } from '../data/surgeData';
+import { forecastFootfall } from '../ml/forecast';
 
 // Map camera movement helper
 function MapViewUpdater({ center, zoom }) {
@@ -46,6 +47,7 @@ export default function SurgeForecast() {
   const state = useAppState();
 
   // Inputs state
+  const [selectedGhatId, setSelectedGhatId] = useState('triveni-sangam');
   const [selectedEventId, setSelectedEventId] = useState('makar-sankranti');
   const [pilgrimCount, setPilgrimCount] = useState(2500000);
   const [weather, setWeather] = useState('clear');
@@ -74,13 +76,100 @@ export default function SurgeForecast() {
     'Generating optimal vehicle & security deployment coordinates...'
   ];
 
+  // Live forecast updater that reacts to simulation time & input changes
+  useEffect(() => {
+    if (isAnalyzing) return;
+    
+    const ghatObj = ghatLocations.find(g => g.id === selectedGhatId) || ghatLocations[0];
+    const [nowH, nowM] = state.simulationTime.split(':').map(Number);
+    const totalMinsNow = nowH * 60 + nowM;
+    
+    // 1. Generate historical points up to now
+    const historical = [];
+    for (let min = 0; min <= totalMinsNow; min += 20) {
+      const h = Math.floor(min / 60);
+      const m = min % 60;
+      const timeStr = `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`;
+      
+      const currentHour = h + m / 60;
+      const rad = (currentHour / 24) * Math.PI * 2;
+      const morningFactor = Math.exp(-Math.pow((currentHour - 7) / 2.5, 2)) * 0.45;
+      const eveningFactor = Math.exp(-Math.pow((currentHour - 18) / 3, 2)) * 0.25;
+      const baseFactor = 0.15 + Math.sin(rad - Math.PI / 2) * 0.05;
+      
+      let targetRatio = Math.max(0.08, Math.min(0.95, baseFactor + morningFactor + eveningFactor));
+      
+      const scale = pilgrimCount / 2500000;
+      targetRatio *= scale;
+      
+      if (weather === 'rain') targetRatio *= 0.85;
+      else if (weather === 'fog') targetRatio *= 0.9;
+      
+      let crowdVal = Math.round(ghatObj.capacity * targetRatio);
+      
+      // Step 3 of demo triggers high surge on Sangam
+      if (state.isDemoActive && selectedGhatId === 'triveni-sangam') {
+        if (state.simulationTime >= '07:42') {
+          const progress = min / 462;
+          const multiplier = 1 + progress * 0.82;
+          crowdVal = Math.round(crowdVal * Math.min(1.82, multiplier));
+        }
+      }
+      
+      crowdVal = Math.min(ghatObj.capacity, crowdVal);
+      historical.push({
+        time: timeStr,
+        crowd: Math.round(crowdVal / 1000), // in thousands
+      });
+    }
+    
+    if (historical.length === 0) {
+      historical.push({ time: '00:00', crowd: Math.round(ghatObj.capacity * 0.1 / 1000) });
+    }
+    
+    // 2. Call the EWMA / Holt-Winters forecaster
+    const forecastInput = historical.map(p => ({ time: p.time, crowd: p.crowd }));
+    const forecastRaw = forecastFootfall(forecastInput, 0.3, 0.1, 6);
+    
+    // 3. Combine for Recharts
+    const combined = historical.map(p => ({
+      time: p.time,
+      actual: p.crowd,
+      predicted: null,
+      upper: null,
+      lower: null,
+    }));
+    
+    // Connect actual and predicted lines
+    const lastHist = historical[historical.length - 1];
+    if (lastHist) {
+      combined.push({
+        time: lastHist.time,
+        actual: lastHist.crowd,
+        predicted: lastHist.crowd,
+        upper: lastHist.crowd,
+        lower: lastHist.crowd,
+      });
+    }
+    
+    forecastRaw.forEach(p => {
+      combined.push({
+        time: p.time,
+        actual: null,
+        predicted: p.predicted,
+        upper: p.upper,
+        lower: p.lower,
+      });
+    });
+    
+    setChartData(combined);
+  }, [selectedGhatId, state.simulationTime, pilgrimCount, weather, congestionIndex, state.isDemoActive, isAnalyzing]);
+
   // Initialize data on mount
   useEffect(() => {
     // Generate initial forecast
     const initialResult = simulateSurgeResponse('makar-sankranti', 2500000, 'clear', 5.5);
-    const initialChart = generateForecastChartData('makar-sankranti', 2500000, 'clear', 5.5);
     setForecastResult(initialResult);
-    setChartData(initialChart);
   }, []);
 
   // Cycle thinking messages during loading
@@ -183,8 +272,12 @@ export default function SurgeForecast() {
     ];
   };
 
+  const selectedGhatObj = ghatLocations.find(g => g.id === selectedGhatId) || ghatLocations[0];
+  const capacityK = selectedGhatObj.capacity / 1000;
+  const hasSurgeAlert = chartData.some(p => p.predicted !== null && p.predicted > capacityK * 0.85);
+
   return (
-    <div className="flex-1 flex flex-col sm:flex-row h-[calc(100vh-56px)] overflow-hidden bg-navy">
+    <div className="flex-1 flex flex-col sm:flex-row h-[calc(100vh-88px)] max-sm:h-[calc(100vh-96px)] overflow-hidden bg-navy">
       {/* LEFT COLUMN: Controls & Forecast Analytics */}
       <div className="w-full sm:w-[45%] lg:w-[42%] h-full flex flex-col p-6 lg:p-8 overflow-y-auto border-r border-border gap-12 scrollbar bg-navy-light z-10">
         
@@ -205,6 +298,24 @@ export default function SurgeForecast() {
           </h2>
 
           <div className="space-y-6">
+            {/* Target Ghat Selection */}
+            <div>
+              <label className="font-heading text-sm font-semibold text-text-secondary uppercase tracking-wider mb-2 block">
+                Target Ghat
+              </label>
+              <select
+                value={selectedGhatId}
+                onChange={(e) => setSelectedGhatId(e.target.value)}
+                className="w-full bg-charcoal-light border border-border text-text-primary rounded-lg px-4 py-4 focus:outline-none focus:border-saffron transition duration-200 font-heading text-base"
+              >
+                {ghatLocations.filter(g => g.type === 'ghat').map((g) => (
+                  <option key={g.id} value={g.id} className="bg-charcoal text-text-primary">
+                    {g.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+
             {/* Calendar Event Selection */}
             <div>
               <label className="font-heading text-sm font-semibold text-text-secondary uppercase tracking-wider mb-2 block">
@@ -352,16 +463,23 @@ export default function SurgeForecast() {
                 {/* Visual header */}
                 <div className="border-b border-border pb-4 flex justify-between items-start">
                   <div>
-                    <span className="bg-cyan/15 text-cyan border border-cyan/20 text-xs font-mono px-2.5 py-1 rounded uppercase tracking-widest font-bold">
-                      PROJECTION REPORT
-                    </span>
+                    <div className="flex items-center gap-2">
+                      <span className="bg-cyan/15 text-cyan border border-cyan/20 text-xs font-mono px-2.5 py-1 rounded uppercase tracking-widest font-bold">
+                        PROJECTION REPORT
+                      </span>
+                      {hasSurgeAlert && (
+                        <span className="bg-red/20 text-red border border-red/40 px-2 py-1 rounded text-[10px] font-bold font-mono tracking-wider animate-pulse">
+                          ⚠️ SURGE ALERT (Threshold: Capacity × 85%)
+                        </span>
+                      )}
+                    </div>
                     <h3 className="text-xl font-heading font-bold text-text-primary mt-3">
-                      {forecastResult.eventName}
+                      {forecastResult.eventName} - {selectedGhatObj.name}
                     </h3>
                   </div>
 
-                  <div className={`w-18 h-18 rounded-full border-2 flex flex-col items-center justify-center font-mono ${getSurgeColor(forecastResult.surgeLevel)}`}>
-                    <span className="text-xl font-bold leading-none">{forecastResult.surgeLevel}</span>
+                  <div className={`w-18 h-18 rounded-full border-2 flex flex-col items-center justify-center font-mono ${getSurgeColor(hasSurgeAlert ? 9.2 : forecastResult.surgeLevel)}`}>
+                    <span className="text-xl font-bold leading-none">{hasSurgeAlert ? 9.2 : forecastResult.surgeLevel}</span>
                     <span className="text-[8px] font-bold uppercase mt-0.5 text-text-secondary">SURGE</span>
                   </div>
                 </div>
@@ -381,9 +499,9 @@ export default function SurgeForecast() {
                       Status Advisory
                     </span>
                     <span className={`text-sm font-bold uppercase mt-1.5 block ${
-                      forecastResult.surgeLevel >= 8 ? 'text-red' : forecastResult.surgeLevel >= 5 ? 'text-amber' : 'text-green'
+                      hasSurgeAlert || forecastResult.surgeLevel >= 8 ? 'text-red' : forecastResult.surgeLevel >= 5 ? 'text-amber' : 'text-green'
                     }`}>
-                      {forecastResult.surgeLevel >= 8 ? '🔴 Critical Alert' : forecastResult.surgeLevel >= 5 ? '🟡 Moderate Risk' : '🟢 Normal Conditions'}
+                      {hasSurgeAlert || forecastResult.surgeLevel >= 8 ? '🔴 Critical Alert' : forecastResult.surgeLevel >= 5 ? '🟡 Moderate Risk' : '🟢 Normal Conditions'}
                     </span>
                   </div>
                 </div>
@@ -397,7 +515,7 @@ export default function SurgeForecast() {
                   <div className="space-y-3">
                     {forecastResult.highestRiskGhats.slice(0, 3).map((ghatName, idx) => {
                       const ghatObj = ghatLocations.find(g => g.name === ghatName) || {};
-                      const valuePct = Math.round(Math.max(20, 100 - (idx * 25) - (10 - forecastResult.surgeLevel) * 4));
+                      const valuePct = Math.round(Math.max(20, 100 - (idx * 25) - (10 - (hasSurgeAlert ? 9.2 : forecastResult.surgeLevel)) * 4));
                       
                       return (
                         <div key={ghatName} className="space-y-2">
@@ -411,7 +529,7 @@ export default function SurgeForecast() {
                           </div>
                           <div className="w-full h-2 bg-charcoal-light rounded-full overflow-hidden">
                             <div
-                              className={`h-full rounded-full ${getSurgeBarColor(forecastResult.surgeLevel)}`}
+                              className={`h-full rounded-full ${getSurgeBarColor(hasSurgeAlert ? 9.2 : forecastResult.surgeLevel)}`}
                               style={{ width: `${valuePct}%` }}
                             />
                           </div>
@@ -465,21 +583,25 @@ export default function SurgeForecast() {
                             <stop offset="95%" stopColor="#00E5FF" stopOpacity={0.0} />
                           </linearGradient>
                         </defs>
-                        <XAxis dataKey="hour" stroke="#4A5568" tickLine={false} />
+                        <XAxis dataKey="time" stroke="#4A5568" tickLine={false} />
                         <YAxis stroke="#4A5568" tickLine={false} />
                         <RechartsTooltip
                           contentStyle={{ background: '#131A2B', borderColor: 'rgba(255,255,255,0.06)', borderRadius: '8px', fontSize: '11px' }}
                           labelStyle={{ color: '#8892A4', fontFamily: 'Space Grotesk', fontWeight: 'bold' }}
                           itemStyle={{ color: '#00E5FF' }}
-                          formatter={(value) => [`${value}K Pilgrims`, 'Predicted']}
+                          formatter={(value, name) => {
+                            if (name === 'actual') return [`${value}K Pilgrims`, 'Actual Crowd'];
+                            if (name === 'predicted') return [`${value}K Pilgrims`, 'Predicted Surge'];
+                            return [value, name];
+                          }}
                         />
                         {/* Confidence Band */}
                         <Area
-                          type="monotone"
-                          dataKey="upper"
-                          stroke="transparent"
-                          fill="url(#colorConfidence)"
-                          className="confidence-band"
+                           type="monotone"
+                           dataKey="upper"
+                           stroke="transparent"
+                           fill="url(#colorConfidence)"
+                           className="confidence-band"
                         />
                         <Area
                           type="monotone"
@@ -488,14 +610,25 @@ export default function SurgeForecast() {
                           fill="#131A2B" // mask lower part
                           fillOpacity={1.0}
                         />
+                        {/* Actual Line */}
+                        <Area
+                          type="monotone"
+                          dataKey="actual"
+                          stroke="#00E5FF"
+                          strokeWidth={2.5}
+                          fill="transparent"
+                        />
                         {/* Predicted Line */}
                         <Area
                           type="monotone"
                           dataKey="predicted"
                           stroke="#FF6B00"
                           strokeWidth={2.5}
+                          strokeDasharray="4 4"
                           fill="url(#colorPredicted)"
                         />
+                        {/* Vertical NOW marker */}
+                        <ReferenceLine x={state.simulationTime} stroke="#FF1744" strokeDasharray="3 3" label={{ value: 'NOW', fill: '#FF1744', fontSize: 10, position: 'top', fontWeight: 'bold' }} />
                         {/* Snan event lines */}
                         <ReferenceLine x="06:00" stroke="rgba(0, 229, 255, 0.4)" strokeDasharray="3 3" label={{ value: 'Peak Snan', fill: '#00E5FF', fontSize: 10, position: 'top' }} />
                       </AreaChart>
@@ -524,6 +657,10 @@ export default function SurgeForecast() {
                   <div className="flex gap-2 items-center">
                     <span className="w-1.5 h-1.5 rounded-full bg-saffron" />
                     <span>Mela transit corridors are highly sensitive to Shahi Snan arrival peaks.</span>
+                  </div>
+                  <div className="flex gap-2 items-center">
+                    <span className="w-1.5 h-1.5 rounded-full bg-red" />
+                    <span>Surge Alert triggers when crowd projection exceeds 85% of Ghat capacity (threshold: Capacity × 85%).</span>
                   </div>
                 </div>
               </div>

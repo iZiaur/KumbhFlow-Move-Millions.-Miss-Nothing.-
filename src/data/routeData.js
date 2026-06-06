@@ -124,7 +124,7 @@ export function simulateRouteResponse(origin, destination, mode, pilgrimCount, a
   };
 }
 
-function generateRouteSteps(origin, dest, mode, path) {
+export function generateRouteSteps(origin, dest, mode, path) {
   const steps = [];
   const modeIcon = { walk: '🚶', bus: '🚌', train: '🚂', auto: '🛺', private: '🚗' };
   const icon = modeIcon[mode] || '📍';
@@ -218,7 +218,7 @@ function generateRouteSteps(origin, dest, mode, path) {
   return steps;
 }
 
-function generateWarnings(dest, congestion) {
+export function generateWarnings(dest, congestion) {
   const warnings = [];
   if (congestion > 7) {
     warnings.push({
@@ -247,7 +247,7 @@ function generateWarnings(dest, congestion) {
   return warnings;
 }
 
-function generateProTips(dest, mode, congestion) {
+export function generateProTips(dest, mode, congestion) {
   return [
     {
       tip: `Carry water and light snacks. The walk from the drop point to ${dest.name} can take 20–30 minutes during peak hours.`,
@@ -264,7 +264,7 @@ function generateProTips(dest, mode, congestion) {
   ];
 }
 
-function generateAccessibilityNotes(mode) {
+export function generateAccessibilityNotes(mode) {
   return {
     wheelchairFriendly: mode !== 'auto',
     elderlyFriendly: mode === 'bus' || mode === 'private',
@@ -283,7 +283,7 @@ function generateAccessibilityNotes(mode) {
   };
 }
 
-function generateBetterTime() {
+export function generateBetterTime() {
   const hour = new Date().getHours();
   if (hour >= 5 && hour <= 9) {
     return { time: '2:00 PM – 4:00 PM', reason: 'Post-lunch hours typically see 35% less crowd', reasonHi: 'दोपहर के बाद भीड़ 35% कम होती है' };

@@ -4,6 +4,7 @@ import { MapContainer, TileLayer, CircleMarker, Tooltip, useMap } from 'react-le
 import 'leaflet/dist/leaflet.css';
 import { useAppState, useAppDispatch } from '../context/AppContext';
 import { ghatLocations } from '../data/ghatLocations';
+import QRCode from 'qrcode';
 
 // Helper function to calculate distance in km between two coordinates
 function calculateDistance(lat1, lon1, lat2, lon2) {
@@ -43,6 +44,27 @@ export default function SmartParking() {
   const [duration, setDuration] = useState(4);
   const [bookingConfirmed, setBookingConfirmed] = useState(null);
   const [notifyOnFull, setNotifyOnFull] = useState(true);
+  const [bookingQrUrl, setBookingQrUrl] = useState('');
+
+  useEffect(() => {
+    if (!bookingConfirmed) {
+      setBookingQrUrl('');
+      return;
+    }
+    const zoneObj = state.parking.find((z) => z.id === bookingConfirmed.zoneId);
+    if (!zoneObj) return;
+    const link = `https://www.google.com/maps/dir/?api=1&destination=${zoneObj.lat},${zoneObj.lng}&travelmode=driving`;
+    QRCode.toDataURL(link, {
+      color: {
+        dark: '#131A2B',
+        light: '#FFFFFF'
+      },
+      width: 150,
+      margin: 1
+    })
+      .then(url => setBookingQrUrl(url))
+      .catch(err => console.error('Failed to generate local parking QR', err));
+  }, [bookingConfirmed, state.parking]);
 
   // Admin state
   const [divertRules, setDivertRules] = useState([
@@ -216,7 +238,7 @@ export default function SmartParking() {
   };
 
   return (
-    <div className="flex-1 flex flex-col sm:flex-row h-[calc(100vh-56px)] overflow-hidden bg-navy">
+    <div className="flex-1 flex flex-col sm:flex-row h-[calc(100vh-88px)] max-sm:h-[calc(100vh-96px)] overflow-hidden bg-navy">
       {/* LEFT COLUMN: Workspace Panel */}
       <div className="w-full sm:w-[45%] lg:w-[38%] h-full flex flex-col p-6 lg:p-8 overflow-y-auto border-r border-border gap-8 scrollbar bg-navy-light z-10">
         
@@ -252,6 +274,24 @@ export default function SmartParking() {
             >
               Admin Ops
             </button>
+          </div>
+
+          {/* AI Auto-rebalance System Toggle */}
+          <div className="flex items-center justify-between bg-charcoal border border-border px-4 py-3 rounded-lg">
+            <span className="text-xs font-heading font-bold text-text-secondary uppercase tracking-wider">
+              AI Auto-rebalance System
+            </span>
+            <div
+              onClick={() => dispatch({ type: 'TOGGLE_AUTO_REBALANCE' })}
+              className={`w-11 h-6 rounded-full p-1 cursor-pointer transition-colors duration-200 flex items-center ${
+                state.autoRebalanceActive ? 'bg-cyan' : 'bg-charcoal-light border border-border'
+              }`}
+            >
+              <div
+                className="w-4 h-4 rounded-full bg-white shadow-md transform transition-transform duration-200"
+                style={{ transform: state.autoRebalanceActive ? 'translateX(20px)' : 'translateX(0px)' }}
+              />
+            </div>
           </div>
         </div>
 
@@ -530,14 +570,14 @@ export default function SmartParking() {
                       {/* Working Google Maps Redirection QR Code */}
                       <div className="flex flex-col items-center text-center space-y-4 py-2 border-b border-border w-full">
                         <div className="w-36 h-36 border-2 border-dashed border-cyan/40 bg-charcoal-light rounded-lg flex flex-col items-center justify-center p-2 relative overflow-hidden group">
-                          {getQRDataUrl(bookingConfirmed.zoneId) ? (
+                          {bookingQrUrl ? (
                             <img
-                              src={getQRDataUrl(bookingConfirmed.zoneId)}
+                              src={bookingQrUrl}
                               alt="Parking Spot GPS Link"
-                              className="w-28 h-28 object-contain rounded"
+                              className="w-28 h-28 object-contain rounded bg-white p-1"
                             />
                           ) : (
-                            <div className="text-text-dim text-xs">No active URL</div>
+                            <div className="text-text-dim text-xs">Generating QR...</div>
                           )}
                           <span className="absolute bottom-0.5 font-mono text-[7px] text-cyan/70 tracking-widest uppercase">
                             GPS Gate Navigation
@@ -759,14 +799,14 @@ export default function SmartParking() {
               </div>
             </div>
 
-            {/* Live Occupancy Feed of all 20 zones */}
+            {/* Live Occupancy Feed of P1-P8 zones as a grid */}
             <div className="flex flex-col gap-4 shrink-0">
               <h3 className="font-heading text-xs font-semibold text-text-secondary uppercase tracking-widest border-b border-border pb-3">
-                Live Zone Capacities (P1–P20)
+                Live Lot Capacities (P1–P8)
               </h3>
               
-              <div className="flex flex-col gap-3">
-                {state.parking.map((zone) => (
+              <div className="grid grid-cols-2 gap-4">
+                {state.parking.slice(0, 8).map((zone) => (
                   <div
                     key={zone.id}
                     onClick={() => {
@@ -774,36 +814,41 @@ export default function SmartParking() {
                       setMapFocus([zone.lat, zone.lng]);
                       setMapZoom(14);
                     }}
-                    className={`card bg-charcoal border border-border rounded-xl p-6 hover:border-text-secondary/30 transition duration-200 cursor-pointer flex flex-col gap-3 ${
-                      selectedZoneId === zone.id ? 'border-cyan' : ''
+                    className={`card bg-charcoal border border-border rounded-xl p-5 hover:border-text-secondary/30 transition duration-200 cursor-pointer flex flex-col gap-3 ${
+                      selectedZoneId === zone.id ? 'border-cyan shadow-md shadow-cyan/5' : ''
                     }`}
                   >
                     <div className="flex justify-between items-start">
                       <div>
-                        <div className="flex gap-2 items-center">
+                        <div className="flex gap-1.5 items-center">
                           <span className="font-mono text-xs font-bold text-cyan">{zone.id}</span>
-                          <h4 className="text-sm font-heading font-bold text-text-primary">
+                          <h4 className="text-xs font-bold text-text-primary font-heading truncate max-w-[80px]">
                             {zone.name}
                           </h4>
                         </div>
-                        <span className="text-[9px] font-mono text-text-dim uppercase tracking-wider mt-1 block">
-                          Type: {zone.type} · Slots: {zone.totalSlots}
-                        </span>
+                        <div className="flex items-center gap-2 mt-1">
+                          <span className="text-[8px] font-mono text-text-dim uppercase tracking-wider block">
+                            Slots: {zone.totalSlots}
+                          </span>
+                          <span className="text-[8px] font-mono text-cyan bg-cyan/10 border border-cyan/20 px-1 py-0.2 rounded uppercase shrink-0">
+                            {zone.type}
+                          </span>
+                        </div>
                       </div>
                       
-                      <div className="text-right font-mono text-xs">
+                      <div className="text-right font-mono text-[10px] flex flex-col gap-0.5">
                         <span className={`font-bold ${
                           zone.fillPercent > 80 ? 'text-red' : zone.fillPercent >= 50 ? 'text-amber' : 'text-green'
                         }`}>
                           {zone.available} open
                         </span>
-                        <span className="text-text-dim text-[10px] block mt-0.5">
+                        <span className="text-text-dim text-[8px]">
                           {zone.fillPercent}% full
                         </span>
                       </div>
                     </div>
 
-                    <div className="w-full h-1.5 bg-charcoal-light rounded-full overflow-hidden">
+                    <div className="w-full h-1 bg-charcoal-light rounded-full overflow-hidden">
                       <div
                         className={`h-full rounded-full transition-all duration-300 ${
                           zone.fillPercent > 80 ? 'bg-red' : zone.fillPercent >= 50 ? 'bg-amber' : 'bg-green'
@@ -819,8 +864,42 @@ export default function SmartParking() {
         )}
       </div>
 
-      {/* RIGHT COLUMN: Map Visualizer */}
       <div className="w-full sm:w-[55%] lg:w-[62%] h-full relative z-0">
+        {/* Toast Notification for Auto-rebalance */}
+        <AnimatePresence>
+          {state.latestRebalance && (
+            <motion.div
+              initial={{ opacity: 0, y: -20, scale: 0.95 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: -20, scale: 0.95 }}
+              className="absolute top-6 right-6 z-[999] bg-[#131A2B]/95 border-2 border-cyan px-6 py-4 shadow-2xl rounded-lg max-w-sm font-heading"
+            >
+              <div className="flex items-center gap-3">
+                <div className="w-2.5 h-2.5 bg-cyan animate-ping rounded-full shrink-0" />
+                <div className="flex-1">
+                  <span className="text-[10px] font-mono font-extrabold text-cyan uppercase tracking-widest block mb-1">
+                    AI Auto-Rebalance Event
+                  </span>
+                  <p className="text-sm font-bold text-white leading-normal">
+                    {state.latestRebalance.source} → {state.latestRebalance.target} reroute
+                  </p>
+                  <p className="text-xs text-text-secondary mt-1 leading-relaxed">
+                    Moving <strong>{state.latestRebalance.vehicles.toLocaleString()}</strong> vehicles.
+                  </p>
+                  <p className="text-xs text-amber font-mono font-semibold mt-1">
+                    +{state.latestRebalance.extraWalk} min walk to ghat
+                  </p>
+                </div>
+                <button
+                  onClick={() => dispatch({ type: 'CLEAR_REBALANCE' })}
+                  className="text-text-secondary hover:text-white transition font-bold text-sm ml-2 self-start cursor-pointer border-none bg-transparent"
+                >
+                  ✕
+                </button>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
         <MapContainer
           center={[25.4310, 81.8850]}
           zoom={13}

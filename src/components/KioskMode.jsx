@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAppState } from '../context/AppContext';
 import { destinations, languages } from '../data/routeData';
+import QRCode from 'qrcode';
 
 // Simulated Kiosk Chatbot Q&A database
 const KIOSK_QA = [
@@ -39,10 +40,16 @@ export default function KioskMode() {
   const [largeText, setLargeText] = useState(false);
   const [highContrast, setHighContrast] = useState(false);
   const [audioGuide, setAudioGuide] = useState(false);
-  const [currentLang, setCurrentLang] = useState('hi'); // Default to Hindi for kiosks
+  const [currentLang, setCurrentLang] = useState(() => localStorage.getItem('kumbh_lang') || 'hi');
+
+  const changeLanguage = (lang) => {
+    setCurrentLang(lang);
+    localStorage.setItem('kumbh_lang', lang);
+  };
 
   // Selection state
   const [selectedDestId, setSelectedDestId] = useState('');
+  const [mobileTab, setMobileTab] = useState('directory'); // 'directory' | 'chat'
   
   // Chatbot states
   const [chatInput, setChatInput] = useState('');
@@ -131,10 +138,70 @@ export default function KioskMode() {
   };
 
   // Pre-determined responses for chat inputs
-  const processChatReply = (query) => {
+  const processChatReply = async (query) => {
     const cleanQuery = query.toLowerCase();
-    let matchedReply = null;
+    
+    // Q1: Where should I park?
+    if (cleanQuery.includes('park') || cleanQuery.includes('पार्क')) {
+      const isRebalance = state.latestRebalance || (state.isDemoActive && state.demoStep >= 5);
+      if (isRebalance) {
+        const link = `https://www.google.com/maps/dir/?api=1&destination=25.4500,81.8480&travelmode=driving`;
+        const qrUrl = await QRCode.toDataURL(link, { color: { dark: '#131A2B', light: '#FFFFFF' }, width: 150, margin: 1 });
+        return {
+          textEn: "AI Parking Rebalance active: Parking Lot P4 is full (92% capacity). Incoming traffic is redirected to Parking Lot P6 (Civil Lines B, current occupancy: 50%). Walk time: 18 mins (+4 mins walk to Triveni Sangam). Scan the QR code below to navigate to P6.",
+          textHi: "AI पार्किंग पुनर्संतुलन सक्रिय: पार्किंग स्थल P4 भर चुका है (92% क्षमता)। आने वाले वाहनों को पार्किंग स्थल P6 (सिविल लाइंस B, वर्तमान अधिभोग: 50%) पर निर्देशित किया जा रहा है। चलने का समय: 18 मिनट (त्रिवेणी संगम तक +4 मिनट की अतिरिक्त पैदल दूरी)। P6 पर नेविगेट करने के लिए नीचे दिए गए QR कोड को स्कैन करें।",
+          qrUrl
+        };
+      } else {
+        const link = `https://www.google.com/maps/dir/?api=1&destination=25.4130,81.8780&travelmode=driving`;
+        const qrUrl = await QRCode.toDataURL(link, { color: { dark: '#131A2B', light: '#FFFFFF' }, width: 150, margin: 1 });
+        return {
+          textEn: "Normal operations. We recommend parking at Parking Lot P4 (Naini Lot B, current occupancy: 53%). Walk time to Triveni Sangam is 14 minutes. Scan the QR code below to navigate.",
+          textHi: "सामान्य परिचालन। हम आपको पार्किंग स्थल P4 (नैनी लॉट B, वर्तमान अधिभोग: 53%) में पार्क करने की सलाह देते हैं। त्रिवेणी संगम तक चलने का समय 14 मिनट है। नेविगेट करने के लिए नीचे दिए गए QR कोड को स्कैन करें।",
+          qrUrl
+        };
+      }
+    }
 
+    // Q2: Fastest path to my ghat?
+    if (cleanQuery.includes('path') || cleanQuery.includes('रास्ता') || cleanQuery.includes('route') || cleanQuery.includes('तेज़ रास्ता') || cleanQuery.includes('सबसे तेज़')) {
+      const isReroute = state.isDemoActive && state.demoStep >= 4;
+      if (isReroute) {
+        const link = `https://www.google.com/maps/dir/?api=1&origin=25.4358,81.8463&destination=25.4270,81.8855&travelmode=walking`;
+        const qrUrl = await QRCode.toDataURL(link, { color: { dark: '#131A2B', light: '#FFFFFF' }, width: 150, margin: 1 });
+        return {
+          textEn: "AI Route Intelligence: Congestion detected on NH-30 (Route A). Dijkstra re-routing is active. Rerouting 42,000 pilgrims via Route C (East Bypass). Live ETA is 24 mins. This bypass saves you 15 minutes of delays. Scan the QR code below for Google Maps directions.",
+          textHi: "AI मार्ग खुफिया: NH-30 (मुख्य मार्ग A) पर भारी भीड़ का पता चला है। डिकस्ट्रा (Dijkstra) री-रूटिंग सक्रिय है। 42,000 तीर्थयात्रियों को वैकल्पिक मार्ग C (पूर्वी बाईपास) से निर्देशित किया जा रहा है। लाइव यात्रा समय: 24 मिनट। यह बाईपास आपको 15 मिनट के विलंब से बचाएगा। गूगल मैप्स दिशा-निर्देशों के लिए नीचे दिए गए QR कोड को स्कैन करें।",
+          qrUrl
+        };
+      } else {
+        const link = `https://www.google.com/maps/dir/?api=1&origin=25.4358,81.8463&destination=25.4270,81.8855&travelmode=walking`;
+        const qrUrl = await QRCode.toDataURL(link, { color: { dark: '#131A2B', light: '#FFFFFF' }, width: 150, margin: 1 });
+        return {
+          textEn: "Normal mela traffic. The fastest path to Triveni Sangam is via Primary Route A. Live ETA: 15 minutes. Scan the QR code below for walk navigation.",
+          textHi: "सामान्य मेला यातायात। त्रिवेणी संगम के लिए सबसे तेज़ मार्ग मुख्य मार्ग A के माध्यम से है। लाइव यात्रा समय: 15 मिनट। पैदल नेविगेशन के लिए नीचे दिए गए QR कोड को स्कैन करें।",
+          qrUrl
+        };
+      }
+    }
+
+    // Q3: When should I leave?
+    if (cleanQuery.includes('leave') || cleanQuery.includes('निकलना') || cleanQuery.includes('when') || cleanQuery.includes('कब निकलना')) {
+      const isDemo = state.isDemoActive;
+      if (isDemo) {
+        return {
+          textEn: "AI Surge Forecast Warning: Sangam crowd density is rising. We strongly recommend leaving by 08:15 AM to avoid the impending morning peak surge at 09:00 AM (expected 425K pilgrims vs 300K safety capacity).",
+          textHi: "AI भीड़ पूर्वानुमान चेतावनी: त्रिवेणी संगम पर भीड़ का घनत्व बढ़ रहा है। हम आपको सुबह 08:15 बजे से पहले प्रस्थान करने की सलाह देते हैं ताकि सुबह 09:00 बजे (अनुमानित 425K श्रद्धालु बनाम 300K सुरक्षा क्षमता) की भारी भीड़ से बचा जा सके।"
+        };
+      } else {
+        return {
+          textEn: "Surge Forecast normal. Bathing crowd patterns indicate that traveling between 2:00 PM and 4:00 PM is optimal, as morning peaks have cleared and wait times are under 15 minutes.",
+          textHi: "भीड़ का पूर्वानुमान सामान्य है। स्नान के पैटर्न से संकेत मिलता है कि दोपहर 2:00 बजे से शाम 4:00 बजे के बीच यात्रा करना सबसे उपयुक्त है, क्योंकि सुबह की भीड़ समाप्त हो जाती है और प्रतीक्षा समय 15 मिनट से कम होता है।"
+        };
+      }
+    }
+
+    let matchedReply = null;
     // Search Q&A database
     for (const qa of KIOSK_QA) {
       if (qa.keywords.some(kw => cleanQuery.includes(kw))) {
@@ -158,7 +225,7 @@ export default function KioskMode() {
   };
 
   // Submit query
-  const submitChatQuery = (text) => {
+  const submitChatQuery = async (text) => {
     if (!text.trim()) return;
 
     const userMsg = {
@@ -172,13 +239,14 @@ export default function KioskMode() {
     setChatInput('');
     setIsTyping(true);
 
-    setTimeout(() => {
-      const reply = processChatReply(text);
+    try {
+      const reply = await processChatReply(text);
       const botMsg = {
         id: Date.now() + 1,
         sender: 'bot',
         textEn: reply.textEn,
-        textHi: reply.textHi
+        textHi: reply.textHi,
+        qrUrl: reply.qrUrl
       };
 
       setChatMessages((prev) => [...prev, botMsg]);
@@ -190,7 +258,10 @@ export default function KioskMode() {
           currentLang === 'hi' ? 'hi-IN' : 'en-IN'
         );
       }
-    }, 1200);
+    } catch (err) {
+      console.error(err);
+      setIsTyping(false);
+    }
   };
 
   // Simulated metrics helper for destinations
@@ -240,21 +311,32 @@ export default function KioskMode() {
     return 'text-green bg-green/10 border-green/20';
   };
 
-  // Helper QR code generator
-  const getKioskQRDataUrl = (destId) => {
-    const destObj = destinations.find(d => d.id === destId);
-    if (!destObj) return '';
+  const [destQrUrl, setDestQrUrl] = useState('');
+  useEffect(() => {
+    if (!selectedDestId) {
+      setDestQrUrl('');
+      return;
+    }
+    const destObj = destinations.find(d => d.id === selectedDestId);
+    if (!destObj) return;
     const link = `https://www.google.com/maps/dir/?api=1&destination=${destObj.lat},${destObj.lng}&travelmode=walking`;
-    return `https://api.qrserver.com/v1/create-qr-code/?size=180x180&color=131A2B&bgcolor=FFFFFF&data=${encodeURIComponent(link)}`;
-  };
+    QRCode.toDataURL(link, {
+      color: {
+        dark: '#131A2B',
+        light: '#FFFFFF'
+      },
+      width: 180,
+      margin: 2
+    })
+      .then(url => setDestQrUrl(url))
+      .catch(err => console.error('Failed to generate kiosk dest QR', err));
+  }, [selectedDestId]);
 
   // Quick helper buttons config
   const helperPrompts = [
-    { en: 'Where is nearest restroom?', hi: 'नज़दीकी शौचालय कहाँ है?' },
-    { en: 'Where is Jhunsi parking?', hi: 'पार्किंग सुविधा कहाँ है?' },
-    { en: 'Best time to visit Sangam?', hi: 'संगम जाने का सबसे अच्छा समय?' },
-    { en: 'Bus and Train timings?', hi: 'बस और ट्रेन का समय क्या है?' },
-    { en: 'Where is nearest medical camp?', hi: 'चिकित्सा सहायता शिविर कहाँ है?' }
+    { en: 'Where should I park?', hi: 'मुझे कहाँ पार्क करना चाहिए?' },
+    { en: 'Fastest path to my ghat?', hi: 'मेरे घाट तक सबसे तेज़ रास्ता?' },
+    { en: 'When should I leave?', hi: 'मुझे कब निकलना चाहिए?' }
   ];
 
   // Colors based on high contrast selection
@@ -265,10 +347,30 @@ export default function KioskMode() {
   const themeBorder = highContrast ? 'border-yellow-400' : 'border-border';
 
   return (
-    <div className={`flex-1 flex flex-col sm:flex-row h-[calc(100vh-56px)] overflow-hidden ${themeBg} ${largeText ? 'text-lg' : 'text-sm'}`}>
+    <div className={`flex-1 flex flex-col sm:flex-row h-[calc(100vh-88px)] max-sm:h-[calc(100vh-96px)] overflow-hidden ${themeBg} ${largeText ? 'text-lg' : 'text-sm'}`}>
       
+      {/* Mobile Tab Switcher */}
+      <div className="flex sm:hidden border-b border-white/10 bg-[#090D16] shrink-0 p-1 w-full">
+        <button
+          onClick={() => setMobileTab('directory')}
+          className={`flex-1 py-2.5 text-center text-xs font-bold uppercase tracking-wider rounded-md transition-all duration-200 cursor-pointer ${
+            mobileTab === 'directory' ? 'bg-saffron text-white shadow-md' : 'text-white/50 hover:text-white/80'
+          }`}
+        >
+          🗺️ {currentLang === 'hi' ? 'गंतव्य' : 'Hotspots'}
+        </button>
+        <button
+          onClick={() => setMobileTab('chat')}
+          className={`flex-1 py-2.5 text-center text-xs font-bold uppercase tracking-wider rounded-md transition-all duration-200 cursor-pointer ${
+            mobileTab === 'chat' ? 'bg-saffron text-white shadow-md' : 'text-white/50 hover:text-white/80'
+          }`}
+        >
+          💬 {currentLang === 'hi' ? 'कुंभ गाइड AI' : 'AI Guide'}
+        </button>
+      </div>
+
       {/* LEFT COLUMN: Touch Destination Selection & Quick Directions */}
-      <div className={`w-full sm:w-[55%] h-full flex flex-col p-6 lg:p-8 overflow-y-auto border-r ${themeBorder} gap-8 scrollbar z-10`}>
+      <div className={`${mobileTab === 'directory' ? 'flex' : 'hidden'} sm:flex w-full sm:w-[55%] h-full flex-col p-6 lg:p-8 overflow-y-auto border-r ${themeBorder} gap-8 scrollbar z-10`}>
         
         {/* Kiosk Toolbar / Accessibility */}
         <div className={`flex flex-wrap justify-between items-center bg-charcoal-light/50 border ${themeBorder} p-3 rounded-lg gap-4 shrink-0`}>
@@ -277,7 +379,7 @@ export default function KioskMode() {
               type="button"
               onClick={() => {
                 const nextLang = currentLang === 'hi' ? 'en' : 'hi';
-                setCurrentLang(nextLang);
+                changeLanguage(nextLang);
                 if (audioGuide) speakText(nextLang === 'hi' ? 'भाषा बदली गई' : 'Language changed', nextLang === 'hi' ? 'hi-IN' : 'en-IN');
               }}
               className="px-5 py-3 rounded-md border-2 border-cyan/40 bg-cyan/5 hover:bg-cyan/10 font-heading font-bold text-cyan text-sm cursor-pointer transition shadow-sm"
@@ -436,11 +538,15 @@ export default function KioskMode() {
               {/* Right Column: Scannable QR directions */}
               <div className="flex flex-col items-center gap-3 shrink-0 p-4 border border-border/25 rounded-lg bg-charcoal-light/30 text-center">
                 <div className="w-36 h-36 bg-white rounded-md flex items-center justify-center p-2">
-                  <img
-                    src={getKioskQRDataUrl(selectedDestId)}
-                    alt="Navigation GPS QR"
-                    className="w-32 h-32 object-contain"
-                  />
+                  {destQrUrl ? (
+                    <img
+                      src={destQrUrl}
+                      alt="Navigation GPS QR"
+                      className="w-32 h-32 object-contain"
+                    />
+                  ) : (
+                    <div className="text-text-dim text-xs text-navy">Generating QR...</div>
+                  )}
                 </div>
                 <div className="space-y-1">
                   <span className={`text-[9px] font-mono tracking-wider font-extrabold uppercase ${
@@ -462,7 +568,7 @@ export default function KioskMode() {
       </div>
 
       {/* RIGHT COLUMN: Multilingual Kiosk AI Assistant */}
-      <div className="w-full sm:w-[45%] h-full flex flex-col p-6 lg:p-8 bg-[#0D1321]/90 border-l border-border relative z-10">
+      <div className={`${mobileTab === 'chat' ? 'flex' : 'hidden'} sm:flex w-full sm:w-[45%] h-full flex-col p-6 lg:p-8 bg-[#0D1321]/90 border-l border-border relative z-10`}>
         
         {/* Chatbot Header */}
         <div className="flex gap-3 items-center border-b border-border pb-4 mb-4 shrink-0">
@@ -495,6 +601,11 @@ export default function KioskMode() {
                     {currentLang === 'hi' ? msg.textHi : msg.textEn}
                   </p>
                   
+                  {msg.qrUrl && (
+                    <div className="mt-2.5 p-1 bg-white rounded-md w-28 h-28 mx-auto flex items-center justify-center border border-border shrink-0">
+                      <img src={msg.qrUrl} alt="Guidance QR Code" className="w-26 h-26 object-contain" />
+                    </div>
+                  )}
                   {isBot && (
                     <div className="flex justify-between items-center border-t border-border/10 pt-1.5 mt-0.5">
                       <button

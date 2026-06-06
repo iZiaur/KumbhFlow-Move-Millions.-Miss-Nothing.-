@@ -1,8 +1,19 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { MapContainer, TileLayer, Polyline, CircleMarker, Tooltip, useMap } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
-import { simulateRouteResponse, destinations, transportModes, languages } from '../data/routeData';
+import { simulateRouteResponse, destinations, transportModes, languages, generateRouteSteps, generateWarnings, generateProTips, generateAccessibilityNotes, generateBetterTime } from '../data/routeData';
+import { getAlternateRoutes } from '../ml/router';
+import { GHATS, PARKING, ROADS } from '../data/kumbhData';
+import { useAppState, useAppDispatch } from '../context/AppContext';
+import QRCode from 'qrcode';
+
+const VIRTUAL_BRIDGES = [
+  { id: 'road-bridge-1', name: 'Sangam-Arail Pontoon Bridge', from: 'triveni-sangam', to: 'arail-ghat', baseTime: 12, congestion: 0.0, path: [[25.4270, 81.8855], [25.4230, 81.8890], [25.4190, 81.8920]] },
+  { id: 'road-bridge-2', name: 'Shastri Bridge Pedestrian Link', from: 'jhunsi-ghat', to: 'ram-ghat', baseTime: 15, congestion: 0.0, path: [[25.4480, 81.8830], [25.4430, 81.8820], [25.4380, 81.8810]] },
+  { id: 'road-bridge-3', name: 'Fort Corridor Link', from: 'quila-ghat', to: 'saraswati-ghat', baseTime: 8, congestion: 0.0, path: [[25.4290, 81.8780], [25.4300, 81.8840], [25.4310, 81.8900]] },
+  { id: 'road-bridge-4', name: 'Yamuna Bank Path', from: 'saraswati-ghat', to: 'kali-ghat', baseTime: 10, congestion: 0.0, path: [[25.4310, 81.8900], [25.4360, 81.8810], [25.4410, 81.8720]] },
+];
 
 // Map Bounds Auto-updater sub-component
 function MapBoundsUpdater({ path }) {
@@ -16,13 +27,16 @@ function MapBoundsUpdater({ path }) {
 }
 
 export default function RouteIntelligence() {
+  const state = useAppState();
+  const dispatch = useAppDispatch();
+
   // Form state
   const [origin, setOrigin] = useState(destinations[5].id); // Default: Prayagraj Junction
   const [destination, setDestination] = useState(destinations[0].id); // Default: Triveni Sangam
   const [transportMode, setTransportMode] = useState('bus');
   const [pilgrimCount, setPilgrimCount] = useState(1);
   const [accessibility, setAccessibility] = useState(false);
-  const [language, setLanguage] = useState('en');
+  const [language, setLanguage] = useState(() => localStorage.getItem('kumbh_lang') || 'en');
 
   // UI state
   const [isLoading, setIsLoading] = useState(false);
@@ -30,6 +44,8 @@ export default function RouteIntelligence() {
   const [selectedRoute, setSelectedRoute] = useState('primary'); // 'primary' | 'alt1' | 'alt2'
   const [showShareModal, setShowShareModal] = useState(false);
   const [tipsCollapsed, setTipsCollapsed] = useState(true);
+  const [qrCodeDataUrl, setQrCodeDataUrl] = useState('');
+  const [selectedIncident, setSelectedIncident] = useState('none');
 
   // AI thinking status messages cycling
   const messages = [
@@ -52,6 +68,92 @@ export default function RouteIntelligence() {
     return () => clearInterval(interval);
   }, [isLoading]);
 
+  // Create a road state hash to trigger re-memoization of Dijkstra
+  const roadStateHash = JSON.stringify(
+    state.roads.map((r) => ({ id: r.id, congestion: r.congestion }))
+  );
+
+  // Memoize raw Dijkstra routes using roadStateHash
+  const rawRoutes = useMemo(() => {
+    const mapToGraphNode = (id) => {
+      const map = {
+        'prayagraj-jn': 'P5',
+        'naini-station': 'P3',
+        'civil-lines': 'P6',
+        'jhunsi': 'P1',
+        'parade-ground': 'P7'
+      };
+      return map[id] || id;
+    };
+    
+    const start = mapToGraphNode(origin);
+    const end = mapToGraphNode(destination);
+    const nodes = [...GHATS, ...PARKING];
+    const allEdges = [...state.roads, ...VIRTUAL_BRIDGES];
+    
+    return getAlternateRoutes(nodes, allEdges, start, end);
+  }, [origin, destination, roadStateHash]);
+
+  const runLiveRouter = (originId, destId, mode, pilgrims, access) => {
+    const originDetails = destinations.find(d => d.id === originId);
+    const destDetails = destinations.find(d => d.id === destId);
+    
+    if (!rawRoutes || rawRoutes.length === 0) {
+      return simulateRouteResponse(originId, destId, mode, pilgrims, access);
+    }
+    
+    const formattedRoutes = rawRoutes.map((route, index) => {
+      const steps = generateRouteSteps(originDetails, destDetails, mode, route.path);
+      return {
+        name: route.name,
+        nameHi: index === 0 ? 'मुख्य मार्ग (Optimized)' : index === 1 ? 'वैकल्पिक मार्ग A (Bypass)' : 'वैकल्पिक मार्ग B (Scenic)',
+        eta: `${route.eta} min`,
+        etaMinutes: route.eta,
+        distance: `${route.distance} km`,
+        congestion_score: route.congestionScore,
+        path: route.path,
+        highlight: route.highlight,
+        color: route.color,
+        co2: route.co2,
+        pilgrims: route.pilgrims,
+        steps,
+        mode,
+      };
+    });
+    
+    return {
+      primary_route: formattedRoutes[0],
+      alternative_routes: [
+        formattedRoutes[1] || formattedRoutes[0],
+        formattedRoutes[2] || formattedRoutes[0],
+      ],
+      warnings: generateWarnings(destDetails, formattedRoutes[0].congestion_score),
+      pro_tips: generateProTips(destDetails, mode, formattedRoutes[0].congestion_score),
+      accessibility_notes: access ? generateAccessibilityNotes(mode) : null,
+      better_time: generateBetterTime(),
+    };
+  };
+
+  const changeLanguage = (lang) => {
+    setLanguage(lang);
+    localStorage.setItem('kumbh_lang', lang);
+  };
+
+  // Local QR Code Generator Effect
+  useEffect(() => {
+    if (!routeResult) return;
+    QRCode.toDataURL(getGoogleMapsUrl(), {
+      color: {
+        dark: '#131A2B',
+        light: '#FFFFFF'
+      },
+      width: 180,
+      margin: 2
+    })
+      .then(url => setQrCodeDataUrl(url))
+      .catch(err => console.error('Failed to generate local QR', err));
+  }, [routeResult, selectedRoute, origin, destination, transportMode]);
+
   // Form Submit Handler
   const handlePlanRoute = (e) => {
     e.preventDefault();
@@ -64,10 +166,63 @@ export default function RouteIntelligence() {
     setSelectedRoute('primary');
 
     setTimeout(() => {
-      const response = simulateRouteResponse(origin, destination, transportMode, pilgrimCount, accessibility);
+      const response = runLiveRouter(origin, destination, transportMode, pilgrimCount, accessibility);
       setRouteResult(response);
       setIsLoading(false);
     }, 2500);
+  };
+
+  // Live recalculator when roads change or transport parameters update
+  useEffect(() => {
+    // Only auto-recalculate if a route has been plotted at least once, or if demo mode is active
+    if (!routeResult && !state.isDemoActive) return;
+    
+    let currentOrigin = origin;
+    let currentDestination = destination;
+    
+    // In demo mode step 4, force Route planning from Junction to Sangam
+    if (state.isDemoActive && state.demoStep === 4) {
+      currentOrigin = 'prayagraj-jn';
+      currentDestination = 'triveni-sangam';
+    }
+    
+    const response = runLiveRouter(currentOrigin, currentDestination, transportMode, pilgrimCount, accessibility);
+    setRouteResult(response);
+  }, [state.roads, state.isDemoActive, origin, destination, transportMode, pilgrimCount, accessibility]);
+
+  // Sync selected route with demo step 4
+  useEffect(() => {
+    if (state.isDemoActive && state.demoStep === 4) {
+      setSelectedRoute('alt2');
+    } else if (state.isDemoActive && state.demoStep < 4) {
+      setSelectedRoute('primary');
+    }
+  }, [state.isDemoActive, state.demoStep]);
+
+  const handleIncidentChange = (e) => {
+    const val = e.target.value;
+    setSelectedIncident(val);
+    
+    let updatedRoads = ROADS; // reset
+    if (val === 'sangam-surge') {
+      updatedRoads = ROADS.map(road => {
+        if (road.id === 'road-3' || road.id === 'road-14' || road.id === 'road-15') {
+          return { ...road, congestion: 4.8 };
+        }
+        return road;
+      });
+    } else if (val === 'vip-route-a') {
+      updatedRoads = ROADS.map(road => {
+        if (road.id === 'road-13' || road.id === 'road-7') {
+          return { ...road, congestion: 5.5 };
+        }
+        return road;
+      });
+    } else if (val === 'heavy-rain') {
+      updatedRoads = ROADS.map(road => ({ ...road, congestion: 2.2 }));
+    }
+    
+    dispatch({ type: 'UPDATE_ROADS', payload: updatedRoads });
   };
 
   // Text-To-Speech (Web Speech API) Guidance
@@ -144,7 +299,7 @@ export default function RouteIntelligence() {
   };
 
   return (
-    <div className="flex-1 flex flex-col sm:flex-row h-[calc(100vh-56px)] overflow-hidden bg-navy">
+    <div className="flex-1 flex flex-col sm:flex-row h-[calc(100vh-88px)] max-sm:h-[calc(100vh-96px)] overflow-hidden bg-navy">
       {/* LEFT COLUMN: Input Form & Results */}
       <div className="w-full sm:w-[45%] lg:w-[38%] h-full flex flex-col p-6 lg:p-8 overflow-y-auto border-r border-border gap-8 scrollbar bg-navy-light z-10">
         
@@ -264,6 +419,23 @@ export default function RouteIntelligence() {
             </div>
           </div>
 
+          {/* Simulate Mela Incident Selection */}
+          <div>
+            <label className="font-heading text-xs font-semibold text-text-secondary uppercase tracking-wider mb-2 block">
+              Simulate Mela Incident
+            </label>
+            <select
+              value={selectedIncident}
+              onChange={handleIncidentChange}
+              className="w-full bg-charcoal-light border border-border text-text-primary rounded-lg px-4 py-3.5 focus:outline-none focus:border-saffron transition duration-200 font-heading text-sm"
+            >
+              <option value="none" className="bg-charcoal text-text-primary">None (Normal Flow)</option>
+              <option value="sangam-surge" className="bg-charcoal text-text-primary">Sangam Congestion (+60%)</option>
+              <option value="vip-route-a" className="bg-charcoal text-text-primary">VIP Convoy on Route A</option>
+              <option value="heavy-rain" className="bg-charcoal text-text-primary">Heavy Rain (All Roads +40%)</option>
+            </select>
+          </div>
+
           {/* Language selector */}
           <div>
             <label className="font-heading text-xs font-semibold text-text-secondary uppercase tracking-wider mb-2 block">
@@ -274,7 +446,7 @@ export default function RouteIntelligence() {
                 <button
                   key={lang.id}
                   type="button"
-                  onClick={() => setLanguage(lang.id)}
+                  onClick={() => changeLanguage(lang.id)}
                   className={`flex-1 py-2 rounded-lg border text-center transition duration-200 font-heading text-xs font-medium cursor-pointer ${
                     language === lang.id
                       ? 'border-cyan text-cyan bg-cyan/5'
@@ -425,6 +597,39 @@ export default function RouteIntelligence() {
                             : routeResult.alternative_routes[1].distance
                           )
                       }
+                    </span>
+                  </div>
+
+                  <div className="space-y-1">
+                    <span className="text-[10px] text-text-secondary font-heading uppercase tracking-wider block">
+                      Pilgrims Diverted
+                    </span>
+                    <span className="font-mono text-2xl font-semibold text-saffron tracking-tight">
+                      {(selectedRoute === 'primary'
+                        ? routeResult.primary_route.pilgrims
+                        : (selectedRoute === 'alt1'
+                            ? routeResult.alternative_routes[0].pilgrims
+                            : routeResult.alternative_routes[1].pilgrims
+                          )
+                      )?.toLocaleString()}
+                    </span>
+                  </div>
+
+                  <div className="space-y-1">
+                    <span className="text-[10px] text-text-secondary font-heading uppercase tracking-wider block">
+                      CO₂ Saved
+                    </span>
+                    <span className="font-mono text-2xl font-semibold text-green tracking-tight font-heading block">
+                      {selectedRoute === 'primary'
+                        ? routeResult.primary_route.co2
+                        : (selectedRoute === 'alt1'
+                            ? routeResult.alternative_routes[0].co2
+                            : routeResult.alternative_routes[1].co2
+                          )
+                      } kg
+                    </span>
+                    <span className="text-[8px] text-text-dim block mt-0.5" style={{ fontSize: '8px', opacity: 0.5 }}>
+                      Formula: (vehicles × km × 0.12 kg/km)
                     </span>
                   </div>
                 </div>
@@ -900,16 +1105,14 @@ export default function RouteIntelligence() {
                 <div className="absolute bottom-2 left-2 w-4 h-4 border-b-2 border-l-2 border-cyan" />
                 <div className="absolute bottom-2 right-2 w-4 h-4 border-b-2 border-r-2 border-cyan" />
                 
-                {routeResult ? (
+                {routeResult && qrCodeDataUrl ? (
                   <img
-                    src={`https://api.qrserver.com/v1/create-qr-code/?size=150x150&color=00E5FF&bgcolor=1A2335&data=${encodeURIComponent(
-                      getGoogleMapsUrl()
-                    )}`}
+                    src={qrCodeDataUrl}
                     alt="Scannable Route QR Code"
-                    className="w-36 h-36 object-contain rounded"
+                    className="w-36 h-36 object-contain rounded bg-white p-1"
                   />
                 ) : (
-                  <div className="text-text-dim text-xs">No active route</div>
+                  <div className="text-text-dim text-xs">Generating QR...</div>
                 )}
                 
                 <span className="absolute bottom-0.5 font-mono text-[8px] text-cyan/70 tracking-widest uppercase">

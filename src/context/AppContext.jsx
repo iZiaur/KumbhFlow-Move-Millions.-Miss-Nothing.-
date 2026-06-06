@@ -8,6 +8,8 @@ import {
   generateSurgePrediction,
 } from '../data/mockData';
 
+import { GHATS, PARKING, ROADS } from '../data/kumbhData';
+
 const AppContext = createContext(null);
 const AppDispatchContext = createContext(null);
 
@@ -22,6 +24,15 @@ const initialState = {
   selectedGhat: null,
   mapCenter: [25.4310, 81.8850],
   mapZoom: 13,
+  simulationTime: '07:30',
+  isDemoActive: false,
+  demoStep: 0,
+  demoCaption: '',
+  roads: ROADS,
+  autoRebalanceActive: false,
+  latestRebalance: null,
+  simSpeedMultiplier: 1.0,
+  events: [],
 };
 
 function appReducer(state, action) {
@@ -52,6 +63,46 @@ function appReducer(state, action) {
       return { ...state, activeModule: action.payload };
     case 'SELECT_GHAT':
       return { ...state, selectedGhat: action.payload };
+    case 'SET_DEMO_STATE':
+      return {
+        ...state,
+        isDemoActive: action.payload.isDemoActive,
+        demoStep: action.payload.demoStep,
+        demoCaption: action.payload.demoCaption,
+      };
+    case 'UPDATE_ROADS':
+      return { ...state, roads: action.payload };
+    case 'SET_SIMULATION_TIME':
+      return { ...state, simulationTime: action.payload };
+    case 'TOGGLE_AUTO_REBALANCE':
+      return { ...state, autoRebalanceActive: !state.autoRebalanceActive };
+    case 'TRIGGER_REBALANCE':
+      return { ...state, latestRebalance: action.payload };
+    case 'CLEAR_REBALANCE':
+      return { ...state, latestRebalance: null };
+    case 'ADD_EVENT_LOG':
+      return {
+        ...state,
+        events: [
+          { id: Date.now() + Math.random(), time: state.simulationTime, message: action.payload },
+          ...state.events
+        ].slice(0, 100),
+      };
+    case 'SET_SIM_SPEED':
+      return { ...state, simSpeedMultiplier: action.payload };
+    case 'RESET_DEMO':
+      return {
+        ...state,
+        isDemoActive: false,
+        demoStep: 0,
+        demoCaption: '',
+        simulationTime: '07:30',
+        roads: ROADS,
+        autoRebalanceActive: false,
+        latestRebalance: null,
+        simSpeedMultiplier: 1.0,
+        events: [],
+      };
     default:
       return state;
   }
