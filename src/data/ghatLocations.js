@@ -145,6 +145,16 @@ export const parkingZones = [
   { id: 'P8', name: 'GT Road Entry', lat: 25.4600, lng: 81.8250, totalSlots: 700, type: 'car' },
   { id: 'P9', name: 'Parade Ground', lat: 25.4350, lng: 81.8500, totalSlots: 800, type: 'mixed' },
   { id: 'P10', name: 'Mela Ground East', lat: 25.4280, lng: 81.8950, totalSlots: 250, type: 'car' },
+  { id: 'P11', name: 'Jhunsi Zone C', lat: 25.4500, lng: 81.8700, totalSlots: 500, type: 'car' },
+  { id: 'P12', name: 'Jhunsi Zone D', lat: 25.4520, lng: 81.8750, totalSlots: 450, type: 'car' },
+  { id: 'P13', name: 'Arail East Ring', lat: 25.4180, lng: 81.8980, totalSlots: 600, type: 'car' },
+  { id: 'P14', name: 'Arail West Ring', lat: 25.4160, lng: 81.8880, totalSlots: 400, type: 'mixed' },
+  { id: 'P15', name: 'Naini South Ring', lat: 25.4020, lng: 81.8600, totalSlots: 750, type: 'bus' },
+  { id: 'P16', name: 'GT Road West Gate', lat: 25.4620, lng: 81.8150, totalSlots: 500, type: 'car' },
+  { id: 'P17', name: 'Parade Ground West', lat: 25.4370, lng: 81.8420, totalSlots: 350, type: 'auto' },
+  { id: 'P18', name: 'Sangam Crossing Pkwy', lat: 25.4290, lng: 81.8910, totalSlots: 300, type: 'car' },
+  { id: 'P19', name: 'Sector 4 Camp Link', lat: 25.4330, lng: 81.8580, totalSlots: 400, type: 'mixed' },
+  { id: 'P20', name: 'Sector 12 Camp Link', lat: 25.4220, lng: 81.8720, totalSlots: 500, type: 'bus' },
 ];
 
 // Bus/train routes for vehicle blip simulation

@@ -4,6 +4,7 @@ import LiveMap from './components/LiveMap';
 import AlertFeed from './components/AlertFeed';
 import TransportTimeline from './components/TransportTimeline';
 import RouteIntelligence from './components/RouteIntelligence';
+import SmartParking from './components/SmartParking';
 import { useSimulation } from './hooks/useSimulation';
 import { useAppState } from './context/AppContext';
 
@@ -56,7 +57,7 @@ export default function App() {
       case 'route-intelligence':
         return <RouteIntelligence />;
       case 'smart-parking':
-        return <ComingSoon title="Smart Parking Allocator" />;
+        return <SmartParking />;
       case 'surge-forecast':
         return <ComingSoon title="Surge Forecast Engine" />;
       case 'kiosk-mode':
