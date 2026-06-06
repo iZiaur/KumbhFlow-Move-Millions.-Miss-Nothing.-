@@ -111,6 +111,38 @@ export default function RouteIntelligence() {
   const originDetails = destinations.find((d) => d.id === origin);
   const destDetails = destinations.find((d) => d.id === destination);
 
+  // Generate Google Maps Directions URL with waypoints and travel mode
+  const getGoogleMapsUrl = () => {
+    if (!originDetails || !destDetails || !activePath) return '';
+    const originCoords = `${originDetails.lat},${originDetails.lng}`;
+    const destCoords = `${destDetails.lat},${destDetails.lng}`;
+
+    let waypointsParam = '';
+    if (activePath.length > 2) {
+      // Limit to 9 waypoints to comply with Google Maps URL guidelines
+      const intermediate = activePath.slice(1, -1).slice(0, 9);
+      waypointsParam = intermediate.map((coord) => `${coord[0]},${coord[1]}`).join('|');
+    }
+
+    const gmapsModeMap = {
+      walk: 'walking',
+      bus: 'transit',
+      train: 'transit',
+      auto: 'driving',
+      private: 'driving',
+    };
+    const mode = selectedRoute === 'primary' 
+      ? routeResult?.primary_route?.mode 
+      : transportMode;
+    const gmapsMode = gmapsModeMap[mode] || 'driving';
+
+    let url = `https://www.google.com/maps/dir/?api=1&origin=${originCoords}&destination=${destCoords}&travelmode=${gmapsMode}`;
+    if (waypointsParam) {
+      url += `&waypoints=${encodeURIComponent(waypointsParam)}`;
+    }
+    return url;
+  };
+
   return (
     <div className="flex-1 flex flex-col sm:flex-row h-[calc(100vh-56px)] overflow-hidden bg-navy">
       {/* LEFT COLUMN: Input Form & Results */}
@@ -849,47 +881,44 @@ export default function RouteIntelligence() {
               initial={{ scale: 0.95, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.95, opacity: 0 }}
-              className="bg-charcoal border border-border rounded-xl p-8 max-w-xs w-full text-center space-y-6 shadow-2xl"
+              className="bg-charcoal border border-border rounded-xl p-8 max-w-xs w-full flex flex-col items-center text-center gap-6 shadow-2xl"
             >
               <div className="space-y-1">
                 <h3 className="font-heading text-lg font-bold text-text-primary">
                   Scan Route
                 </h3>
                 <p className="text-xs text-text-secondary font-heading">
-                  Scan the QR code to navigate offline on your mobile device
+                  Scan to launch Google Maps directions with computed waypoints
                 </p>
               </div>
 
-              {/* SIMULATED QR CODE BOX */}
-              <div className="w-48 h-48 mx-auto border-2 border-dashed border-cyan/40 bg-charcoal-light rounded-lg flex flex-col items-center justify-center p-4 relative overflow-hidden group">
+              {/* REAL SCANNABLE QR CODE BOX */}
+              <div className="w-48 h-48 mx-auto border-2 border-dashed border-cyan/40 bg-charcoal-light rounded-lg flex flex-col items-center justify-center p-3 relative overflow-hidden group">
                 {/* Cybernetic details */}
                 <div className="absolute top-2 left-2 w-4 h-4 border-t-2 border-l-2 border-cyan" />
                 <div className="absolute top-2 right-2 w-4 h-4 border-t-2 border-r-2 border-cyan" />
                 <div className="absolute bottom-2 left-2 w-4 h-4 border-b-2 border-l-2 border-cyan" />
                 <div className="absolute bottom-2 right-2 w-4 h-4 border-b-2 border-r-2 border-cyan" />
                 
-                {/* Abstract QR grid simulation */}
-                <div className="grid grid-cols-6 gap-1 w-32 h-32 opacity-75">
-                  {[...Array(36)].map((_, i) => {
-                    const isFilled = (i % 2 === 0 && i % 3 !== 0) || i === 0 || i === 5 || i === 30 || i === 35;
-                    return (
-                      <div
-                        key={i}
-                        className={`rounded-sm transition duration-300 ${
-                          isFilled ? 'bg-cyan' : 'bg-transparent'
-                        }`}
-                      />
-                    );
-                  })}
-                </div>
+                {routeResult ? (
+                  <img
+                    src={`https://api.qrserver.com/v1/create-qr-code/?size=150x150&color=00E5FF&bgcolor=1A2335&data=${encodeURIComponent(
+                      getGoogleMapsUrl()
+                    )}`}
+                    alt="Scannable Route QR Code"
+                    className="w-36 h-36 object-contain rounded"
+                  />
+                ) : (
+                  <div className="text-text-dim text-xs">No active route</div>
+                )}
                 
-                <span className="absolute bottom-1 font-mono text-[8px] text-cyan/70 tracking-widest uppercase">
-                  KumbhFlow MelaMesh
+                <span className="absolute bottom-0.5 font-mono text-[8px] text-cyan/70 tracking-widest uppercase">
+                  Google Maps Link
                 </span>
               </div>
 
               <p className="text-[10px] text-text-dim font-heading max-w-[200px] mx-auto">
-                Operates offline via the Prayagraj Local Mela Meshnet. No internet connection required.
+                Decodes directly to a Google Maps directions URL, including custom travel modes and intermediate checkpoints.
               </p>
 
               <button
