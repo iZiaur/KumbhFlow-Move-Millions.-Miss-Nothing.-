@@ -1,13 +1,13 @@
 
 <div align="center">
 
-# 🕉️ KumbhFlow
+# KumbhFlow
 
 ### *Move Millions. Miss Nothing.*
 
 **AI-Powered Transportation & Mobility Intelligence for Mahakumbh**
 
-[![Live Demo](https://img.shields.io/badge/Live-Demo-00E5FF?style=for-the-badge&logo=vercel)](https://kumbh-flow-move-millions-miss-nothi.vercel.app/)
+[![Live Demo](https://img.shields.io/badge/Live-Demo-00E5FF?style=for-the-badge&logo=vercel)](https://kumbh-flow.vercel.app//)
 [![Status](https://img.shields.io/badge/Status-Operational-00E676?style=for-the-badge)]()
 [![License](https://img.shields.io/badge/License-MIT-888?style=for-the-badge)]()
 
@@ -187,7 +187,7 @@ A production deployment would ingest from UP Police CCTV analytics, Indian Railw
 
 <div align="center">
 
-**[🚀 Live Demo](https://kumbh-flow-move-millions-miss-nothi.vercel.app/)** &nbsp;·&nbsp; **[📺 Cascade Video](./docs/demo.gif)** &nbsp;·&nbsp; **[🏗️ Architecture](#-architecture)**
+**[🚀 Live Demo](https://kumbh-flow.vercel.app/)** &nbsp;·&nbsp; **[📺 Cascade Video](./docs/demo.gif)** &nbsp;·&nbsp; **[🏗️ Architecture](#-architecture)**
 
 Made with ❤️, ☕, and a healthy respect for 660 million pilgrims.
 
