@@ -187,7 +187,7 @@ A production deployment would ingest from UP Police CCTV analytics, Indian Railw
 
 <div align="center">
 
-**[🚀 Live Demo](https://kumbh-flow.vercel.app/)** &nbsp;·&nbsp; **[📺 Cascade Video](./docs/demo.gif)** &nbsp;·&nbsp; **[🏗️ Architecture](#-architecture)**
+**[🚀 Live Demo](https://kumbh-flow.vercel.app/)** &nbsp;·&nbsp; **[📺 Cascade Video](https://drive.google.com/file/d/1rfs1etmA_ds-OFrx39m5UgmqpQllfMdq/view?usp=sharing)** &nbsp;·&nbsp; **[🏗️ Architecture](#-architecture)**
 
 Made with ❤️, ☕, and a healthy respect for 660 million pilgrims.
 
