@@ -5,6 +5,8 @@ import AlertFeed from './components/AlertFeed';
 import TransportTimeline from './components/TransportTimeline';
 import RouteIntelligence from './components/RouteIntelligence';
 import SmartParking from './components/SmartParking';
+import SurgeForecast from './components/SurgeForecast';
+import KioskMode from './components/KioskMode';
 import { useSimulation } from './hooks/useSimulation';
 import { useAppState } from './context/AppContext';
 
@@ -59,9 +61,9 @@ export default function App() {
       case 'smart-parking':
         return <SmartParking />;
       case 'surge-forecast':
-        return <ComingSoon title="Surge Forecast Engine" />;
+        return <SurgeForecast />;
       case 'kiosk-mode':
-        return <ComingSoon title="Commuter Guidance Kiosk" />;
+        return <KioskMode />;
       default:
         return <CommandCenter />;
     }
