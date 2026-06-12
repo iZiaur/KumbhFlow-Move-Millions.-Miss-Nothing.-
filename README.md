@@ -1,198 +1,220 @@
-
 <div align="center">
 
-# KumbhFlow
+# 🌊 KumbhFlow — AI-Powered Crowd Management Dashboard
 
-### *Move Millions. Miss Nothing.*
+### *Move Millions. Miss Nothing.* — Intelligent mobility orchestration for Mahakumbh 2025
 
-**AI-Powered Transportation & Mobility Intelligence for Mahakumbh**
+[![React](https://img.shields.io/badge/React-19-61DAFB?style=for-the-badge&logo=react&logoColor=white)](https://react.dev/)
+[![Vite](https://img.shields.io/badge/Vite-Tooling-646CFF?style=for-the-badge&logo=vite&logoColor=white)](https://vitejs.dev/)
+[![TailwindCSS](https://img.shields.io/badge/Tailwind-CSS-06B6D4?style=for-the-badge&logo=tailwindcss&logoColor=white)](https://tailwindcss.com/)
+[![Leaflet](https://img.shields.io/badge/Leaflet-Maps-199900?style=for-the-badge&logo=leaflet&logoColor=white)](https://leafletjs.com/)
+[![Vercel](https://img.shields.io/badge/Deployed_on-Vercel-000000?style=for-the-badge&logo=vercel&logoColor=white)](https://vercel.com/)
 
-[![Live Demo](https://img.shields.io/badge/Live-Demo-00E5FF?style=for-the-badge&logo=vercel)](https://kumbh-flow.vercel.app//)
-[![Status](https://img.shields.io/badge/Status-Operational-00E676?style=for-the-badge)]()
-[![License](https://img.shields.io/badge/License-MIT-888?style=for-the-badge)]()
-
-![KumbhFlow Cascade Demo](./docs/demo.gif)
-
-*60-second cascade: surge detected → routes rerouted → parking rebalanced → pilgrims guided. All in-browser, zero backend.*
+[🌐 Live Dashboard](https://kumbh-flow.vercel.app/) · [📺 Cascade Video](https://drive.google.com/file/d/1rfs1etmA_ds-OFrx39m5UgmqpQllfMdq/view?usp=sharing)
 
 </div>
 
 ---
 
-## 🚨 The Problem
+## 📌 About
 
-Mahakumbh 2025 will move **~660 million cumulative pilgrims** through Prayagraj — the largest peaceful human gathering on Earth. A single misallocated parking lot or a 10-minute reroute delay can cascade into stampedes, missed bathing windows, and emergency response failures.
+**KumbhFlow** is an AI-powered transportation and mobility intelligence dashboard designed for the Prayagraj Mahakumbh 2025. Built to orchestrate the movement of ~660 million cumulative pilgrims, the platform features a unified control center running complex routing, forecasting, and parking allocation algorithms entirely within the browser.
 
-> *"How do you orchestrate the movement of 660M people across roads, railways, buses, parking, and pedestrian pathways — in real time — with data, not guesswork?"*
-
-**KumbhFlow is that orchestration layer.**
+Operating with zero backend dependencies, KumbhFlow synthesizes live sensor data (simulated) into actionable insights to prevent congestion, optimize parking, and deliver multi-lingual kiosk guidance.
 
 ---
 
-## ✨ The Solution
+## ✨ Features
 
-A unified AI control center with **five integrated surfaces**, each backed by a real algorithm running entirely in the user's browser:
+### 🎛️ Command Center & Dashboard
+- **Live Map Interface** — Real-time tracking of pilgrim flow and dynamic incident visualization using Leaflet.
+- **Alert Feed Sidebar** — Instant notifications and event logs for congestion spikes and VIP movements.
+- **Dynamic Metrics Bar** — Monitor total pilgrims, active vehicles, and congestion levels.
+- **Transport Timeline** — Visualize movement across different transit modes simultaneously.
 
-| Surface | What it does | Algorithm |
-|---|---|---|
-| 🎛️ **Dashboard** | Live pilgrim flow, alerts, event log | Real-time tick-based state synthesis |
-| 📈 **Forecast** | 60-min surge prediction per ghat with confidence bands | **EWMA + Holt-Winters** seasonality |
-| 🗺️ **Routes** | Multi-modal pathfinding with incident simulation | **Dijkstra** on congestion-weighted graph |
-| 🅿️ **Parking** | Dynamic P1–P8 reallocation when lots cross 90% | **Greedy + nearest-neighbor** allocator |
-| 🧑‍🦳 **Kiosk** | Bilingual pilgrim guidance (Hindi + English) with QR handoff | Rule-based intent routing + live state |
+### 🤖 AI-Driven Intelligence
+- **Surge Forecast (EWMA + Holt-Winters)** — Predicts next-60-minute footfall per ghat with confidence bands.
+- **Route Intelligence (Dijkstra)** — Live congestion-weighted graph pathfinding to divert crowds during incidents.
+- **Smart Parking Reallocation** — Greedy allocator dynamically reassigns incoming vehicles when lots exceed 90% occupancy.
+- **CO₂ Impact Tracking** — Calculates emissions saved per reroute decision to maximize environmental ROI.
 
----
-
-## 🎬 The 60-Second Cascade
-
-Click **▶ Run Demo Scenario** to watch a single event ripple across the entire system:
-
-```
-07:30 ─ Step 1/6 ─ Normal flow on Dashboard
-07:42 ─ Step 2/6 ─ Sangam congestion spike detected (alert pulses red)
-07:44 ─ Step 3/6 ─ Forecast tab predicts surge 18 min ahead, Surge Alert fires
-07:47 ─ Step 4/6 ─ Routes tab reweights graph, diverts 42K pilgrims via Route C
-07:50 ─ Step 5/6 ─ Parking auto-rebalances P4 → P6 (1,240 vehicles, +4 min walk)
-07:52 ─ Step 6/6 ─ Kiosk shows बिलिंगुअल recommendation + scannable QR
-─────  Congestion: 94% → 61% in 12 simulated minutes ─────
-```
+### 🧑‍🦳 Pilgrim Accessibility (Kiosk Mode)
+- **Bilingual Interface** — Seamless toggle between Hindi (Devanagari) and English.
+- **Scannable QR Handoff** — Direct route transfer to any mobile device without requiring an app install.
+- Inclusive design features: Large text, high-contrast mode, and wheelchair-accessible routing.
 
 ---
 
-## 🏗️ Architecture
+## 🏗️ System Architecture
 
 ```mermaid
-flowchart LR
-    SENS["📡 Sensor Layer<br/>(CCTV, GPS, ticketing — simulated)"] --> STATE["🧠 Live State<br/>(React Context + 2s tick)"]
-    STATE --> FC["📈 EWMA Forecaster<br/>capacity × 0.85 → alert"]
-    STATE --> RT["🗺️ Dijkstra Router<br/>edge = base_time × (1 + congestion)"]
-    STATE --> PK["🅿️ Greedy Allocator<br/>occupancy > 90% → reassign"]
-    FC --> CMD["🎛️ Control Room<br/>(Dashboard + Event Log)"]
-    RT --> CMD
-    PK --> CMD
-    FC --> KIOSK["🧑‍🦳 Pilgrim Kiosk<br/>(Hindi + English + QR)"]
-    RT --> KIOSK
-    PK --> KIOSK
-```
+graph TB
+    subgraph Client["🌐 Browser Layer (React Context)"]
+        STATE["🧠 Live State Engine<br/><i>React Context + 2s tick</i>"]
+        UI["💻 Dashboard UI<br/><i>Vite + TailwindCSS</i>"]
+    end
 
-**Zero backend. Zero paid APIs.** Every prediction, every reroute, every reallocation runs client-side. Vercel-deployable in one click.
+    subgraph Intelligence["⚙️ Algorithms (Zero-Backend)"]
+        FC["📈 EWMA Forecaster<br/><i>Seasonality tracking</i>"]
+        RT["🗺️ Dijkstra Router<br/><i>Live congestion weights</i>"]
+        PK["🅿️ Greedy Allocator<br/><i>Nearest-neighbor assignment</i>"]
+    end
+
+    subgraph Data["📡 Data Ingestion"]
+        SENS["Sensor Layer<br/><i>(Simulated CCTV, GPS)</i>"]
+    end
+
+    SENS -->|"Telemetry"| STATE
+    STATE -->|"Tick State"| FC
+    STATE -->|"Tick State"| RT
+    STATE -->|"Tick State"| PK
+    
+    FC -->|"Predictions"| UI
+    RT -->|"Optimized Paths"| UI
+    PK -->|"Parking Directives"| UI
+```
 
 ---
 
-## 🤖 How AI Is Used (Read This, Judges)
+## 🔄 The 60-Second Cascade Flow
 
-### 1. Surge Forecasting — EWMA + Holt-Winters
-Exponentially-weighted moving average with a learned weekly seasonality factor produces a next-60-minute footfall projection per ghat with ±15% confidence bands. **Surge Alert fires when projection > capacity × 0.85.**
+```mermaid
+sequenceDiagram
+    participant S as 📡 Sensors
+    participant E as 🧠 State Engine
+    participant A as ⚙️ Algorithms
+    participant UI as 🎛️ Dashboard
+    participant K as 🧑‍🦳 Kiosk
 
+    Note over S,K: Event: Sangam Congestion Spike
+    S->>E: Tick: Sangam density crosses 94%
+    E->>A: Trigger Forecast & Route Analysis
+    A-->>E: Surge Alert! 18 min prediction > 85% capacity
+    E->>UI: Flash Alert (Red) & Update Dashboard
+    A->>E: Dijkstra reweighs graph, diverts 42K via Route C
+    A->>E: Parking rebalances P4 -> P6 (occupancy > 90%)
+    E->>UI: Render new routes & parking assignments
+    E->>K: Push new route recommendation (Bilingual)
+    K-->>UI: Display QR for mobile handoff
 ```
-forecast(t+1) = α·actual(t) + (1−α)·forecast(t) + seasonal(t)
-```
-
-### 2. Route Optimization — Dijkstra with Live Congestion
-Road segments are nodes in a weighted graph where `weight = base_time × (1 + congestion)`. When an incident is injected (Sangam +60%, VIP convoy, heavy rain), edge weights mutate and Dijkstra recomputes the top-3 alternate routes — sub-second, memoized.
-
-### 3. Parking Reallocation — Greedy + Walking-Distance Penalty
-When any lot crosses 90% occupancy, incoming vehicles are reassigned to the nearest under-utilized lot weighted by `walking_distance_to_target_ghat`. Notifications surface as toasts and persist in the Event Log.
-
-### 4. CO₂ Impact Tracking
-`co2_saved = vehicles_diverted × km_saved × 0.12 kg/km` — surfaced per reroute decision so operators see environmental ROI alongside time savings.
 
 ---
 
-## 🛠️ Built With AI-Assisted Workflows
+## 🛠️ Tech Stack
 
-This project was built using modern AI development practices:
-
-- **Antigravity Agent Mode** for end-to-end feature scaffolding (data layer, ML modules, demo orchestrator).
-- **Claude / GPT** for algorithm design, code review, and pitch refinement.
-- **AI-assisted commits** with clear human review at every deliverable boundary (data → forecast → routes → parking → kiosk → cascade).
-- **Prompt engineering as documentation** — every major module was specified before being written.
-
-Every algorithm was hand-validated. No code was merged without a human running `npm run build` and the cascade demo.
+| Layer | Technology | Purpose |
+|:---:|:---|:---|
+| **Frontend** | React 19, Vite | Lightning-fast, HMR-enabled UI |
+| **Styling** | TailwindCSS v4 | Utility-first responsive design |
+| **Mapping** | Leaflet, React-Leaflet | Open-source interactive map rendering |
+| **Charts** | Recharts | Declarative data visualization |
+| **Animations** | Framer Motion | Smooth UI transitions and metric updates |
+| **Utilities** | qrcode (local) | Offline-capable QR generation |
+| **Hosting** | Vercel | Edge deployment & CI/CD |
 
 ---
 
-## 🚀 Run Locally
+## 📂 Project Structure
+
+```text
+kumbhflow/
+├── src/
+│   ├── assets/              # Static media and icons
+│   ├── components/          # Reusable UI modules
+│   │   ├── LiveMap.jsx      # Leaflet map integration
+│   │   ├── KioskMode.jsx    # Bilingual pilgrim guidance
+│   │   ├── RouteIntelligence.jsx # Pathfinding UI
+│   │   ├── SmartParking.jsx # Parking allocator UI
+│   │   └── SurgeForecast.jsx# EWMA forecasting charts
+│   ├── context/             # React Context for global state
+│   ├── data/                # Static geospatial & seed data
+│   ├── demo/                # Demonstration cascade scripts
+│   ├── hooks/               # Custom hooks (e.g., useLiveTick)
+│   ├── ml/                  # Pure TS implementations of ML algorithms
+│   ├── App.jsx              # Main layout and routing
+│   └── index.css            # Tailwind directives and custom styles
+├── public/                  # Public assets
+├── package.json             # Dependencies and scripts
+└── vite.config.js           # Vite configuration
+```
+
+---
+
+## 🚀 Getting Started
+
+### Prerequisites
+- **Node.js** v18 or higher
+
+### 1. Clone the repository
 
 ```bash
-git clone https://github.com/<your-handle>/kumbhflow.git
-cd kumbhflow
+git clone https://github.com/iZiaur/KumbhFlow.git
+cd KumbhFlow
+```
+
+### 2. Install Dependencies
+
+```bash
 npm install
+```
+
+### 3. Run the Development Server
+
+```bash
 npm run dev
 ```
 
-Open `http://localhost:5173` and click **▶ Run Demo Scenario**.
+> The dashboard will run locally at `http://localhost:5173`. Click **▶ Run Demo Scenario** to watch the automated cascade.
 
-### Build
+### 4. Build for Production
 
 ```bash
-npm run build   # bundle < 500KB gzipped, lazy-loaded per tab
+npm run build
 npm run preview
 ```
 
 ---
 
-## 📦 Tech Stack
+## ☁️ Deployment
 
-| Layer | Choice | Why |
-|---|---|---|
-| Framework | **Vite + React** | Sub-second HMR, smallest viable bundle |
-| Maps | **Leaflet + OpenStreetMap** | Free, accurate, no API key |
-| Charts | **Recharts** | Declarative, tree-shakeable |
-| QR | **`qrcode` (local)** | No external dependency — scans even offline |
-| Deploy | **Vercel** | Edge CDN, zero-config preview branches |
-| ML | **Pure TypeScript** | No Python, no server, no cold starts |
+KumbhFlow is a static single-page application and is natively configured for zero-setup deployment on platforms like Vercel, Netlify, or GitHub Pages.
 
----
-
-## 🌐 Accessibility & Inclusion
-
-- ✅ Hindi (Devanagari) + English + Bengali language toggles
-- ✅ Large-text mode (`बड़े अक्षर`)
-- ✅ High-contrast mode (`उच्च कंट्रास्ट`)
-- ✅ Audio guide (`ऑडियो गाइड`)
-- ✅ QR handoff to any phone — works without an app install
-- ✅ Wheelchair / elderly access flag in route planner
-- ✅ Mobile-responsive Kiosk (375px+)
+Every push to the `main` branch automatically triggers a production build and deployment to the Vercel Edge network.
 
 ---
 
 ## 📊 Data Sources
 
-- **Prayagraj Mahakumbh 2025 Official Portal** — pilgrim projections (~660M cumulative).
-- **OpenStreetMap** — road network and ghat coordinates.
-- **Synthetic time-series** — modeled on published Shahi Snan footfall patterns with sinusoidal seasonality + festival spikes + Gaussian noise.
+- **Prayagraj Mahakumbh 2025 Official Portal** — Baseline pilgrim projections.
+- **OpenStreetMap** — Road network and ghat coordinates.
+- **Synthetic Time-Series** — Simulated Shahi Snan footfall patterns generated with sinusoidal seasonality and Gaussian noise.
 
-A production deployment would ingest from UP Police CCTV analytics, Indian Railways PRS, UPSRTC bus telemetry, and ticketing/registration APIs.
-
----
-
-## 🗺️ Roadmap
-
-- [ ] Live ingest from UP Police CCTV crowd-density API
-- [ ] WebSocket fan-out for sub-second multi-operator sync
-- [ ] SMS fallback for kiosk recommendations (no-smartphone pilgrims)
-- [ ] Drone telemetry integration for aerial congestion ground-truth
-- [ ] Multi-event support (Ardh Kumbh, Sinhastha, regional melas)
+*(A production deployment would interface directly with UP Police CCTV analytics, Railway PRS, and UPSRTC APIs).*
 
 ---
 
-## 👥 Team
+## 🤝 Contributing
 
-**KumbhFlow** — built for the Transportation & Mobility Management track.
+Contributions are welcome! If you're passionate about crowdsourcing safety and intelligence:
 
-> *Move Millions. Miss Nothing.*
+1. Fork the repository
+2. Create your feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'add amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
+
+---
+
+## 📄 License
+
+This project is open source and available under the [MIT License](LICENSE).
 
 ---
 
 <div align="center">
 
-**[🚀 Live Demo](https://kumbh-flow.vercel.app/)** &nbsp;·&nbsp; **[📺 Cascade Video](https://drive.google.com/file/d/1rfs1etmA_ds-OFrx39m5UgmqpQllfMdq/view?usp=sharing)** &nbsp;·&nbsp; **[🏗️ Architecture](#-architecture)**
+**Built with ❤️ by [Ziaur Rahman](https://github.com/iZiaur)**
 
-Made with ❤️, ☕, and a healthy respect for 660 million pilgrims.
+⭐ Star this repo if you found it helpful!
 
 </div>
-
-
-
-
